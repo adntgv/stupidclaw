@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StupidClaw — Complete Implementation Plan</title>
+<style>
+:root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --blue: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #bc8cff; --cyan: #39d2c0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 1200px; margin: 0 auto; }
+h1 { color: var(--blue); font-size: 2em; margin: 30px 0 10px; border-bottom: 2px solid var(--blue); padding-bottom: 10px; }
+h2 { color: var(--cyan); font-size: 1.5em; margin: 25px 0 10px; }
+h3 { color: var(--green); font-size: 1.2em; margin: 20px 0 8px; }
+h4 { color: var(--orange); margin: 15px 0 5px; }
+p, li { color: var(--text); margin: 5px 0; }
+ul, ol { padding-left: 24px; }
+code { background: #1f2937; padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.9em; color: var(--green); }
+pre { background: #1f2937; border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 10px 0; }
+pre code { background: none; padding: 0; color: var(--text); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 15px 0; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; margin: 2px; }
+.badge-green { background: #1a3a2a; color: var(--green); }
+.badge-orange { background: #3a2a1a; color: var(--orange); }
+.badge-red { background: #3a1a1a; color: var(--red); }
+.badge-blue { background: #1a2a3a; color: var(--blue); }
+.badge-purple { background: #2a1a3a; color: var(--purple); }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+th { background: #1a2332; color: var(--blue); text-align: left; padding: 10px; border: 1px solid var(--border); }
+td { padding: 10px; border: 1px solid var(--border); }
+details { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; }
+details > summary { padding: 12px 16px; cursor: pointer; font-weight: 600; color: var(--blue); list-style: none; }
+details > summary::before { content: '▶ '; font-size: 0.8em; }
+details[open] > summary::before { content: '▼ '; }
+details > .content { padding: 0 16px 16px; }
+.kw { color: #ff7b72; } .str { color: #a5d6ff; } .fn { color: #d2a8ff; } .cm { color: #8b949e; } .num { color: #79c0ff; } .dec { color: #ffa657; }
+.phase-header { display: flex; align-items: center; gap: 15px; margin: 30px 0 10px; }
+.phase-num { background: var(--blue); color: var(--bg); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2em; flex-shrink: 0; }
+.tree { font-family: monospace; white-space: pre; color: var(--dim); line-height: 1.4; }
+.tree b { color: var(--green); font-weight: normal; }
+.tree i { color: var(--orange); font-style: normal; }
+.effort { float: right; }
+hr { border: none; border-top: 1px solid var(--border); margin: 30px 0; }
+</style>
+</head>
+<body>
+
+<h1>🧠 StupidClaw — Complete Implementation Plan</h1>
+<p style="color:var(--dim)">Generated 2026-03-06 · 5 phases · ~120 hours total · From llama-4-scout to OpenClaw parity</p>
+
+<div class="card">
+<h3>Current State</h3>
+<table>
+<tr><th>Component</th><th>Status</th><th>Details</th></tr>
+<tr><td>Cascade Router</td><td><span class="badge badge-green">✅ Done</span></td><td>easy/medium/hard classification</td></tr>
+<tr><td>Committee of Clones</td><td><span class="badge badge-green">✅ Done</span></td><td>3 parallel prompts + judge (hard lane)</td></tr>
+<tr><td>Verification Gate</td><td><span class="badge badge-green">✅ Done</span></td><td>sufficient/unsupported/contradictory</td></tr>
+<tr><td>FSM States</td><td><span class="badge badge-green">✅ Done</span></td><td>route → plan → act → verify → respond</td></tr>
+<tr><td>Tools</td><td><span class="badge badge-orange">⚠️ Toy</span></td><td>calculator, simulated search, time</td></tr>
+<tr><td>Memory</td><td><span class="badge badge-red">❌ None</span></td><td>No session or long-term memory</td></tr>
+<tr><td>Extensibility</td><td><span class="badge badge-red">❌ None</span></td><td>No tool registry, skills, or sessions</td></tr>
+<tr><td>Prompt Optimization</td><td><span class="badge badge-red">❌ None</span></td><td>Static prompts, no eval pipeline</td></tr>
+</table>
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 1 ═══════════════════════════════════════════════════ -->
+
+<div class="phase-header"><div class="phase-num">1</div><h1 style="border:none;margin:0">Core Tools — Make It Useful</h1></div>
+<p><span class="badge badge-blue">~25 hours</span> <span class="badge badge-green">No dependencies</span></p>
+
+<h2>1.1 New Files</h2>
+<div class="tree">
+stupidclaw/
+├── src/
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   ├── <b>base.py</b>          <i># BaseTool ABC</i>
+│   │   ├── <b>calculator.py</b>    <i># existing, extracted</i>
+│   │   ├── <b>clock.py</b>         <i># existing, extracted</i>
+│   │   ├── <b>web_search.py</b>    <i># DuckDuckGo</i>
+│   │   ├── <b>web_fetch.py</b>     <i># requests + readability</i>
+│   │   ├── <b>file_ops.py</b>      <i># sandboxed read/write</i>
+│   │   └── <b>shell.py</b>         <i># sandboxed subprocess</i>
+│   └── agent.py               <i># updated</i>
+├── data/                       <i># sandboxed file ops root</i>
+└── tests/
+    └── <b>test_tools.py</b>
+</div>
+
+<details><summary>src/tools/base.py — Tool base class</summary><div class="content">
+<pre><code><span class="cm"># src/tools/base.py</span>
+<span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="fn">ToolResult</span>:
+    success: <span class="fn">bool</span>
+    output: <span class="fn">str</span>
+
+<span class="kw">class</span> <span class="fn">BaseTool</span>(ABC):
+    name: <span class="fn">str</span> = <span class="str">""</span>
+    description: <span class="fn">str</span> = <span class="str">""</span>
+    args_description: <span class="fn">str</span> = <span class="str">""</span>
+
+    <span class="dec">@abstractmethod</span>
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        ...
+
+    <span class="kw">def</span> <span class="fn">schema</span>(self) -> <span class="fn">str</span>:
+        <span class="kw">return</span> <span class="str">f"</span>{self.name}: {self.description} | args: {self.args_description}<span class="str">"</span>
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/web_search.py — DuckDuckGo search (free, no API key)</summary><div class="content">
+<pre><code><span class="cm"># src/tools/web_search.py</span>
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+<span class="kw">class</span> <span class="fn">WebSearchTool</span>(BaseTool):
+    name = <span class="str">"web_search"</span>
+    description = <span class="str">"Search the web via DuckDuckGo. Returns top 5 results with title, URL, snippet."</span>
+    args_description = <span class="str">"search query string"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            <span class="kw">from</span> duckduckgo_search <span class="kw">import</span> DDGS
+            results = []
+            <span class="kw">with</span> DDGS() <span class="kw">as</span> ddgs:
+                <span class="kw">for</span> r <span class="kw">in</span> ddgs.text(args, max_results=<span class="num">5</span>):
+                    results.append(<span class="str">f"[{r['title']}]({r['href']})\n{r['body']}"</span>)
+            <span class="kw">if not</span> results:
+                <span class="kw">return</span> ToolResult(<span class="kw">True</span>, <span class="str">"No results found."</span>)
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, <span class="str">"\n\n"</span>.join(results))
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Search error: {e}"</span>)
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/web_fetch.py — Fetch and extract article content</summary><div class="content">
+<pre><code><span class="cm"># src/tools/web_fetch.py</span>
+<span class="kw">import</span> requests
+<span class="kw">from</span> readability <span class="kw">import</span> Document
+<span class="kw">from</span> bs4 <span class="kw">import</span> BeautifulSoup
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+<span class="kw">class</span> <span class="fn">WebFetchTool</span>(BaseTool):
+    name = <span class="str">"web_fetch"</span>
+    description = <span class="str">"Fetch a URL and extract readable text content. Max 4000 chars."</span>
+    args_description = <span class="str">"URL to fetch"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            url = args.strip()
+            resp = requests.get(url, timeout=<span class="num">10</span>, headers={
+                <span class="str">"User-Agent"</span>: <span class="str">"Mozilla/5.0 (compatible; StupidClaw/1.0)"</span>
+            })
+            resp.raise_for_status()
+            doc = Document(resp.text)
+            soup = BeautifulSoup(doc.summary(), <span class="str">"html.parser"</span>)
+            text = soup.get_text(separator=<span class="str">"\n"</span>, strip=<span class="kw">True</span>)
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, text[:<span class="num">4000</span>])
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Fetch error: {e}"</span>)
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/file_ops.py — Sandboxed file read/write</summary><div class="content">
+<pre><code><span class="cm"># src/tools/file_ops.py</span>
+<span class="kw">import</span> os
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+SANDBOX = Path(os.environ.get(<span class="str">"FILE_SANDBOX"</span>, <span class="str">"/app/data"</span>))
+
+<span class="kw">def</span> <span class="fn">_safe_path</span>(name: <span class="fn">str</span>) -> Path:
+    <span class="cm">"""Resolve path inside sandbox, reject escapes."""</span>
+    p = (SANDBOX / name).resolve()
+    <span class="kw">if not</span> str(p).startswith(str(SANDBOX.resolve())):
+        <span class="kw">raise</span> ValueError(<span class="str">"Path escapes sandbox"</span>)
+    <span class="kw">return</span> p
+
+<span class="kw">class</span> <span class="fn">FileReadTool</span>(BaseTool):
+    name = <span class="str">"file_read"</span>
+    description = <span class="str">"Read a file from the data directory. Returns content (max 4000 chars)."</span>
+    args_description = <span class="str">"relative filename (e.g. notes.txt)"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            p = _safe_path(args.strip())
+            <span class="kw">if not</span> p.exists():
+                <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">"File not found"</span>)
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, p.read_text()[:<span class="num">4000</span>])
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Read error: {e}"</span>)
+
+<span class="kw">class</span> <span class="fn">FileWriteTool</span>(BaseTool):
+    name = <span class="str">"file_write"</span>
+    description = <span class="str">"Write content to a file in the data directory. Creates dirs as needed."</span>
+    args_description = <span class="str">"filename|||content (triple pipe separator)"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            parts = args.split(<span class="str">"|||"</span>, <span class="num">1</span>)
+            <span class="kw">if</span> len(parts) != <span class="num">2</span>:
+                <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">"Format: filename|||content"</span>)
+            p = _safe_path(parts[<span class="num">0</span>].strip())
+            p.parent.mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+            p.write_text(parts[<span class="num">1</span>])
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, <span class="str">f"Written {len(parts[1])} chars to {parts[0].strip()}"</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Write error: {e}"</span>)
+
+<span class="kw">class</span> <span class="fn">FileListTool</span>(BaseTool):
+    name = <span class="str">"file_list"</span>
+    description = <span class="str">"List files in the data directory."</span>
+    args_description = <span class="str">"subdirectory (optional, default root)"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            p = _safe_path(args.strip() <span class="kw">or</span> <span class="str">"."</span>)
+            <span class="kw">if not</span> p.is_dir():
+                <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">"Not a directory"</span>)
+            files = [str(f.relative_to(SANDBOX)) <span class="kw">for</span> f <span class="kw">in</span> sorted(p.rglob(<span class="str">"*"</span>)) <span class="kw">if</span> f.is_file()]
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, <span class="str">"\n"</span>.join(files[:<span class="num">50</span>]) <span class="kw">or</span> <span class="str">"(empty)"</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"List error: {e}"</span>)
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/shell.py — Sandboxed shell execution with allowlist</summary><div class="content">
+<pre><code><span class="cm"># src/tools/shell.py</span>
+<span class="kw">import</span> subprocess
+<span class="kw">import</span> shlex
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+ALLOWED_COMMANDS = {
+    <span class="str">"ls"</span>, <span class="str">"cat"</span>, <span class="str">"head"</span>, <span class="str">"tail"</span>, <span class="str">"wc"</span>, <span class="str">"grep"</span>,
+    <span class="str">"date"</span>, <span class="str">"whoami"</span>, <span class="str">"uname"</span>, <span class="str">"df"</span>, <span class="str">"du"</span>,
+    <span class="str">"echo"</span>, <span class="str">"sort"</span>, <span class="str">"uniq"</span>, <span class="str">"cut"</span>, <span class="str">"tr"</span>,
+    <span class="str">"python3"</span>, <span class="str">"pip"</span>, <span class="str">"curl"</span>,
+}
+
+<span class="kw">class</span> <span class="fn">ShellTool</span>(BaseTool):
+    name = <span class="str">"shell"</span>
+    description = <span class="str">"Run a shell command (allowlisted: ls, cat, head, tail, grep, python3, curl, etc). Max 10s timeout."</span>
+    args_description = <span class="str">"shell command string"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            parts = shlex.split(args.strip())
+            <span class="kw">if not</span> parts:
+                <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">"Empty command"</span>)
+            cmd = parts[<span class="num">0</span>].split(<span class="str">"/"</span>)[-<span class="num">1</span>]  <span class="cm"># basename</span>
+            <span class="kw">if</span> cmd <span class="kw">not in</span> ALLOWED_COMMANDS:
+                <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Command '{cmd}' not in allowlist: {sorted(ALLOWED_COMMANDS)}"</span>)
+            result = subprocess.run(
+                args.strip(), shell=<span class="kw">True</span>, capture_output=<span class="kw">True</span>,
+                text=<span class="kw">True</span>, timeout=<span class="num">10</span>, cwd=<span class="str">"/app/data"</span>
+            )
+            output = (result.stdout + result.stderr).strip()
+            <span class="kw">return</span> ToolResult(result.returncode == <span class="num">0</span>, output[:<span class="num">4000</span>] <span class="kw">or</span> <span class="str">"(no output)"</span>)
+        <span class="kw">except</span> subprocess.TimeoutExpired:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">"Command timed out (10s limit)"</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Shell error: {e}"</span>)
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/calculator.py & clock.py — Extracted from agent.py</summary><div class="content">
+<pre><code><span class="cm"># src/tools/calculator.py</span>
+<span class="kw">import</span> math
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+<span class="kw">class</span> <span class="fn">CalculatorTool</span>(BaseTool):
+    name = <span class="str">"calculator"</span>
+    description = <span class="str">"Evaluate a math expression. Supports all math module functions."</span>
+    args_description = <span class="str">"math expression (e.g. 'sqrt(144) + 3**2')"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            ns = {k: getattr(math, k) <span class="kw">for</span> k <span class="kw">in</span> dir(math) <span class="kw">if not</span> k.startswith(<span class="str">'_'</span>)}
+            ns.update({<span class="str">"abs"</span>: abs, <span class="str">"round"</span>: round, <span class="str">"min"</span>: min, <span class="str">"max"</span>: max})
+            <span class="kw">return</span> ToolResult(<span class="kw">True</span>, str(eval(str(args), {<span class="str">"__builtins__"</span>: {}}, ns)))
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Calc error: {e}"</span>)
+</code></pre>
+<pre><code><span class="cm"># src/tools/clock.py</span>
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+<span class="kw">class</span> <span class="fn">ClockTool</span>(BaseTool):
+    name = <span class="str">"time"</span>
+    description = <span class="str">"Get the current date and time (UTC)."</span>
+    args_description = <span class="str">"(none)"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">return</span> ToolResult(<span class="kw">True</span>, datetime.utcnow().strftime(<span class="str">"%Y-%m-%d %H:%M:%S UTC"</span>))
+</code></pre>
+</div></details>
+
+<details><summary>src/tools/__init__.py — Tool registry</summary><div class="content">
+<pre><code><span class="cm"># src/tools/__init__.py</span>
+<span class="kw">from</span> src.tools.calculator <span class="kw">import</span> CalculatorTool
+<span class="kw">from</span> src.tools.clock <span class="kw">import</span> ClockTool
+<span class="kw">from</span> src.tools.web_search <span class="kw">import</span> WebSearchTool
+<span class="kw">from</span> src.tools.web_fetch <span class="kw">import</span> WebFetchTool
+<span class="kw">from</span> src.tools.file_ops <span class="kw">import</span> FileReadTool, FileWriteTool, FileListTool
+<span class="kw">from</span> src.tools.shell <span class="kw">import</span> ShellTool
+
+<span class="kw">def</span> <span class="fn">get_default_tools</span>() -> <span class="fn">dict</span>:
+    tools = {}
+    <span class="kw">for</span> cls <span class="kw">in</span> [CalculatorTool, ClockTool, WebSearchTool, WebFetchTool,
+               FileReadTool, FileWriteTool, FileListTool, ShellTool]:
+        t = cls()
+        tools[t.name] = t
+    <span class="kw">return</span> tools
+</code></pre>
+</div></details>
+
+<details><summary>Updated agent.py — _execute_tool and _plan with new tools</summary><div class="content">
+<pre><code><span class="cm"># Key changes to agent.py</span>
+
+<span class="cm"># In __init__:</span>
+<span class="kw">from</span> src.tools <span class="kw">import</span> get_default_tools
+
+<span class="kw">class</span> <span class="fn">StupidAgent</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+        self.model = MODEL_NAME
+        self.tools = get_default_tools()
+
+    <span class="cm"># Replace _plan system prompt tool list:</span>
+    <span class="kw">def</span> <span class="fn">_plan</span>(self, goal: <span class="fn">str</span>) -> <span class="fn">dict</span>:
+        tool_list = <span class="str">", "</span>.join(self.tools.keys())
+        resp = self._llm([
+            {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: (
+                <span class="str">f"You are a planner. Break the goal into max 3 steps. "</span>
+                <span class="str">f"Available tools: {tool_list}, none. "</span>
+                <span class="str">'Reply JSON ONLY: {"goal":"...","steps":[{"id":1,"description":"...","tool":"web_search","args":"..."}]}'</span>
+            )},
+            {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: goal}
+        ])
+        <span class="kw">return</span> self._extract_json(resp)
+
+    <span class="cm"># Replace _execute_tool:</span>
+    <span class="kw">def</span> <span class="fn">_execute_tool</span>(self, tool_name: <span class="fn">str</span>, args: <span class="fn">str</span>) -> <span class="fn">str</span>:
+        tool = self.tools.get(tool_name)
+        <span class="kw">if not</span> tool:
+            <span class="kw">return</span> <span class="str">f"Unknown tool: {tool_name}"</span>
+        result = tool.execute(args)
+        <span class="kw">return</span> result.output
+</code></pre>
+</div></details>
+
+<details><summary>tests/test_tools.py — Test cases</summary><div class="content">
+<pre><code><span class="cm"># tests/test_tools.py</span>
+<span class="kw">import</span> pytest
+<span class="kw">from</span> src.tools <span class="kw">import</span> get_default_tools
+
+tools = get_default_tools()
+
+<span class="kw">def</span> <span class="fn">test_calculator</span>():
+    r = tools[<span class="str">"calculator"</span>].execute(<span class="str">"2 + 2"</span>)
+    <span class="kw">assert</span> r.success <span class="kw">and</span> r.output == <span class="str">"4"</span>
+
+<span class="kw">def</span> <span class="fn">test_calculator_math</span>():
+    r = tools[<span class="str">"calculator"</span>].execute(<span class="str">"sqrt(144)"</span>)
+    <span class="kw">assert</span> r.success <span class="kw">and</span> r.output == <span class="str">"12.0"</span>
+
+<span class="kw">def</span> <span class="fn">test_time</span>():
+    r = tools[<span class="str">"time"</span>].execute(<span class="str">""</span>)
+    <span class="kw">assert</span> r.success <span class="kw">and</span> <span class="str">"UTC"</span> <span class="kw">in</span> r.output
+
+<span class="kw">def</span> <span class="fn">test_web_search</span>():
+    r = tools[<span class="str">"web_search"</span>].execute(<span class="str">"python programming"</span>)
+    <span class="kw">assert</span> r.success  <span class="cm"># may fail without network</span>
+
+<span class="kw">def</span> <span class="fn">test_file_write_read</span>():
+    tools[<span class="str">"file_write"</span>].execute(<span class="str">"test.txt|||hello world"</span>)
+    r = tools[<span class="str">"file_read"</span>].execute(<span class="str">"test.txt"</span>)
+    <span class="kw">assert</span> r.success <span class="kw">and</span> r.output == <span class="str">"hello world"</span>
+
+<span class="kw">def</span> <span class="fn">test_file_sandbox_escape</span>():
+    r = tools[<span class="str">"file_read"</span>].execute(<span class="str">"../../etc/passwd"</span>)
+    <span class="kw">assert not</span> r.success
+
+<span class="kw">def</span> <span class="fn">test_shell_allowed</span>():
+    r = tools[<span class="str">"shell"</span>].execute(<span class="str">"echo hello"</span>)
+    <span class="kw">assert</span> r.success <span class="kw">and</span> <span class="str">"hello"</span> <span class="kw">in</span> r.output
+
+<span class="kw">def</span> <span class="fn">test_shell_blocked</span>():
+    r = tools[<span class="str">"shell"</span>].execute(<span class="str">"rm -rf /"</span>)
+    <span class="kw">assert not</span> r.success <span class="kw">and</span> <span class="str">"allowlist"</span> <span class="kw">in</span> r.output
+</code></pre>
+</div></details>
+
+<h3>Updated requirements.txt (Phase 1 additions)</h3>
+<pre><code># Add to requirements.txt:
+duckduckgo-search>=7.0.0
+readability-lxml>=0.8.1
+beautifulsoup4>=4.12.0
+requests>=2.31.0</code></pre>
+
+<h3>Phase 1 KPIs</h3>
+<table>
+<tr><th>Metric</th><th>Target</th><th>How to Measure</th></tr>
+<tr><td>Web search works</td><td>80%+ queries return results</td><td>10 diverse queries, count successes</td></tr>
+<tr><td>File sandbox holds</td><td>0 path escapes</td><td>Fuzz with ../../../ paths</td></tr>
+<tr><td>Shell allowlist holds</td><td>0 blocked commands run</td><td>Try rm, wget, nc, etc.</td></tr>
+<tr><td>End-to-end answer quality</td><td>"What's the weather in Almaty?" returns real data</td><td>Manual test</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 2 ═══════════════════════════════════════════════════ -->
+
+<div class="phase-header"><div class="phase-num">2</div><h1 style="border:none;margin:0">Memory System</h1></div>
+<p><span class="badge badge-blue">~30 hours</span> <span class="badge badge-orange">Depends on Phase 1 (file_ops)</span></p>
+
+<h2>2.1 New Files</h2>
+<div class="tree">
+stupidclaw/
+├── src/
+│   ├── memory/
+│   │   ├── __init__.py
+│   │   ├── <b>session.py</b>       <i># Hot session (sliding window)</i>
+│   │   ├── <b>semantic.py</b>      <i># ChromaDB + embeddings</i>
+│   │   ├── <b>episodic.py</b>      <i># Daily JSON logs</i>
+│   │   ├── <b>procedural.py</b>    <i># SOUL.md, USER.md, MEMORY.md</i>
+│   │   └── <b>manager.py</b>       <i># Unified memory interface</i>
+│   └── agent.py
+├── data/
+│   ├── memory/
+│   │   ├── episodes/        <i># YYYY-MM-DD.jsonl</i>
+│   │   ├── SOUL.md
+│   │   ├── USER.md
+│   │   └── MEMORY.md
+│   └── chromadb/            <i># ChromaDB persistent storage</i>
+</div>
+
+<details><summary>src/memory/session.py — Sliding window with token counting</summary><div class="content">
+<pre><code><span class="cm"># src/memory/session.py</span>
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> List, Dict
+
+<span class="kw">def</span> <span class="fn">count_tokens</span>(text: <span class="fn">str</span>) -> <span class="fn">int</span>:
+    <span class="cm">"""Rough token count: ~4 chars per token for English."""</span>
+    <span class="kw">return</span> len(text) // <span class="num">4</span>
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="fn">SessionMemory</span>:
+    max_tokens: <span class="fn">int</span> = <span class="num">6000</span>
+    messages: List[Dict] = field(default_factory=<span class="fn">list</span>)
+
+    <span class="kw">def</span> <span class="fn">add</span>(self, role: <span class="fn">str</span>, content: <span class="fn">str</span>):
+        self.messages.append({<span class="str">"role"</span>: role, <span class="str">"content"</span>: content})
+        self._trim()
+
+    <span class="kw">def</span> <span class="fn">_trim</span>(self):
+        <span class="cm">"""Slide window: drop oldest messages (keep system) until under limit."""</span>
+        <span class="kw">while</span> self._total_tokens() > self.max_tokens <span class="kw">and</span> len(self.messages) > <span class="num">2</span>:
+            <span class="cm"># Find first non-system message to drop</span>
+            <span class="kw">for</span> i, m <span class="kw">in</span> enumerate(self.messages):
+                <span class="kw">if</span> m[<span class="str">"role"</span>] != <span class="str">"system"</span>:
+                    self.messages.pop(i)
+                    <span class="kw">break</span>
+
+    <span class="kw">def</span> <span class="fn">_total_tokens</span>(self) -> <span class="fn">int</span>:
+        <span class="kw">return</span> sum(count_tokens(m[<span class="str">"content"</span>]) <span class="kw">for</span> m <span class="kw">in</span> self.messages)
+
+    <span class="kw">def</span> <span class="fn">get_messages</span>(self) -> List[Dict]:
+        <span class="kw">return</span> list(self.messages)
+
+    <span class="kw">def</span> <span class="fn">get_summary</span>(self) -> <span class="fn">str</span>:
+        <span class="cm">"""One-line summary for pull-based context index."""</span>
+        n = len([m <span class="kw">for</span> m <span class="kw">in</span> self.messages <span class="kw">if</span> m[<span class="str">"role"</span>] == <span class="str">"user"</span>])
+        <span class="kw">if not</span> self.messages:
+            <span class="kw">return</span> <span class="str">"(no conversation yet)"</span>
+        last = self.messages[-<span class="num">1</span>][<span class="str">"content"</span>][:<span class="num">80</span>]
+        <span class="kw">return</span> <span class="str">f"{n} user messages. Last: {last}..."</span>
+
+    <span class="kw">def</span> <span class="fn">clear</span>(self):
+        self.messages.clear()
+</code></pre>
+</div></details>
+
+<details><summary>src/memory/semantic.py — ChromaDB + sentence-transformers</summary><div class="content">
+<pre><code><span class="cm"># src/memory/semantic.py</span>
+<span class="kw">import</span> chromadb
+<span class="kw">from</span> chromadb.utils <span class="kw">import</span> embedding_functions
+<span class="kw">import</span> logging
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">SemanticMemory</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, persist_dir: <span class="fn">str</span> = <span class="str">"/app/data/chromadb"</span>,
+                 model: <span class="fn">str</span> = <span class="str">"all-MiniLM-L6-v2"</span>):
+        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=model)
+        self.client = chromadb.PersistentClient(path=persist_dir)
+        self.collection = self.client.get_or_create_collection(
+            name=<span class="str">"memory"</span>, embedding_function=self.ef
+        )
+
+    <span class="kw">def</span> <span class="fn">store</span>(self, text: <span class="fn">str</span>, metadata: <span class="fn">dict</span> = <span class="kw">None</span>, doc_id: <span class="fn">str</span> = <span class="kw">None</span>):
+        <span class="kw">import</span> uuid
+        doc_id = doc_id <span class="kw">or</span> str(uuid.uuid4())
+        self.collection.upsert(
+            ids=[doc_id],
+            documents=[text],
+            metadatas=[metadata <span class="kw">or</span> {}]
+        )
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, query: <span class="fn">str</span>, n: <span class="fn">int</span> = <span class="num">5</span>) -> <span class="fn">list</span>:
+        results = self.collection.query(query_texts=[query], n_results=n)
+        out = []
+        <span class="kw">for</span> i, doc <span class="kw">in</span> enumerate(results[<span class="str">"documents"</span>][<span class="num">0</span>]):
+            out.append({
+                <span class="str">"id"</span>: results[<span class="str">"ids"</span>][<span class="num">0</span>][i],
+                <span class="str">"text"</span>: doc,
+                <span class="str">"distance"</span>: results[<span class="str">"distances"</span>][<span class="num">0</span>][i],
+                <span class="str">"metadata"</span>: results[<span class="str">"metadatas"</span>][<span class="num">0</span>][i],
+            })
+        <span class="kw">return</span> out
+
+    <span class="kw">def</span> <span class="fn">count</span>(self) -> <span class="fn">int</span>:
+        <span class="kw">return</span> self.collection.count()
+</code></pre>
+</div></details>
+
+<details><summary>src/memory/episodic.py — Daily JSON logs</summary><div class="content">
+<pre><code><span class="cm"># src/memory/episodic.py</span>
+<span class="kw">import</span> json
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="kw">class</span> <span class="fn">EpisodicMemory</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, base_dir: <span class="fn">str</span> = <span class="str">"/app/data/memory/episodes"</span>):
+        self.base = Path(base_dir)
+        self.base.mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">log</span>(self, user_msg: <span class="fn">str</span>, bot_reply: <span class="fn">str</span>, route: <span class="fn">str</span>,
+            tools_used: <span class="fn">list</span> = <span class="kw">None</span>, verified: <span class="fn">bool</span> = <span class="kw">True</span>):
+        today = datetime.utcnow().strftime(<span class="str">"%Y-%m-%d"</span>)
+        entry = {
+            <span class="str">"ts"</span>: datetime.utcnow().isoformat(),
+            <span class="str">"user"</span>: user_msg[:<span class="num">500</span>],
+            <span class="str">"reply"</span>: bot_reply[:<span class="num">500</span>],
+            <span class="str">"route"</span>: route,
+            <span class="str">"tools"</span>: tools_used <span class="kw">or</span> [],
+            <span class="str">"verified"</span>: verified,
+        }
+        f = self.base / <span class="str">f"{today}.jsonl"</span>
+        <span class="kw">with</span> open(f, <span class="str">"a"</span>) <span class="kw">as</span> fp:
+            fp.write(json.dumps(entry) + <span class="str">"\n"</span>)
+
+    <span class="kw">def</span> <span class="fn">get_today</span>(self) -> <span class="fn">list</span>:
+        today = datetime.utcnow().strftime(<span class="str">"%Y-%m-%d"</span>)
+        f = self.base / <span class="str">f"{today}.jsonl"</span>
+        <span class="kw">if not</span> f.exists():
+            <span class="kw">return</span> []
+        <span class="kw">return</span> [json.loads(line) <span class="kw">for</span> line <span class="kw">in</span> f.read_text().strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> line]
+
+    <span class="kw">def</span> <span class="fn">get_summary</span>(self) -> <span class="fn">str</span>:
+        entries = self.get_today()
+        <span class="kw">if not</span> entries:
+            <span class="kw">return</span> <span class="str">"No conversations today."</span>
+        <span class="kw">return</span> <span class="str">f"{len(entries)} exchanges today. Topics: "</span> + \
+               <span class="str">", "</span>.join(e[<span class="str">"user"</span>][:<span class="num">40</span>] <span class="kw">for</span> e <span class="kw">in</span> entries[-<span class="num">3</span>:])
+</code></pre>
+</div></details>
+
+<details><summary>src/memory/procedural.py — SOUL.md / USER.md / MEMORY.md</summary><div class="content">
+<pre><code><span class="cm"># src/memory/procedural.py</span>
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="kw">class</span> <span class="fn">ProceduralMemory</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, base_dir: <span class="fn">str</span> = <span class="str">"/app/data/memory"</span>):
+        self.base = Path(base_dir)
+        self.base.mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+        self.files = {
+            <span class="str">"soul"</span>: self.base / <span class="str">"SOUL.md"</span>,
+            <span class="str">"user"</span>: self.base / <span class="str">"USER.md"</span>,
+            <span class="str">"memory"</span>: self.base / <span class="str">"MEMORY.md"</span>,
+        }
+        <span class="cm"># Create defaults if missing</span>
+        <span class="kw">for</span> key, path <span class="kw">in</span> self.files.items():
+            <span class="kw">if not</span> path.exists():
+                path.write_text(<span class="str">f"# {key.upper()}\n\n(empty)\n"</span>)
+
+    <span class="kw">def</span> <span class="fn">read</span>(self, name: <span class="fn">str</span>) -> <span class="fn">str</span>:
+        path = self.files.get(name)
+        <span class="kw">if</span> path <span class="kw">and</span> path.exists():
+            <span class="kw">return</span> path.read_text()[:<span class="num">2000</span>]
+        <span class="kw">return</span> <span class="str">""</span>
+
+    <span class="kw">def</span> <span class="fn">update</span>(self, name: <span class="fn">str</span>, content: <span class="fn">str</span>):
+        path = self.files.get(name)
+        <span class="kw">if</span> path:
+            path.write_text(content)
+
+    <span class="kw">def</span> <span class="fn">get_identity_prompt</span>(self) -> <span class="fn">str</span>:
+        <span class="cm">"""Compact identity for system prompt injection."""</span>
+        soul = self.read(<span class="str">"soul"</span>)
+        user = self.read(<span class="str">"user"</span>)
+        parts = []
+        <span class="kw">if</span> soul:
+            parts.append(<span class="str">f"[Identity] {soul[:500]}"</span>)
+        <span class="kw">if</span> user:
+            parts.append(<span class="str">f"[User] {user[:500]}"</span>)
+        <span class="kw">return</span> <span class="str">"\n"</span>.join(parts)
+</code></pre>
+</div></details>
+
+<details><summary>src/memory/manager.py — Unified memory with pull-based context</summary><div class="content">
+<pre><code><span class="cm"># src/memory/manager.py</span>
+<span class="kw">from</span> src.memory.session <span class="kw">import</span> SessionMemory
+<span class="kw">from</span> src.memory.semantic <span class="kw">import</span> SemanticMemory
+<span class="kw">from</span> src.memory.episodic <span class="kw">import</span> EpisodicMemory
+<span class="kw">from</span> src.memory.procedural <span class="kw">import</span> ProceduralMemory
+<span class="kw">import</span> logging
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">MemoryManager</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.sessions: <span class="fn">dict</span>[<span class="fn">str</span>, SessionMemory] = {}
+        self.semantic = SemanticMemory()
+        self.episodic = EpisodicMemory()
+        self.procedural = ProceduralMemory()
+
+    <span class="kw">def</span> <span class="fn">get_session</span>(self, user_id: <span class="fn">str</span>) -> SessionMemory:
+        <span class="kw">if</span> user_id <span class="kw">not in</span> self.sessions:
+            self.sessions[user_id] = SessionMemory()
+        <span class="kw">return</span> self.sessions[user_id]
+
+    <span class="kw">def</span> <span class="fn">get_context_index</span>(self, user_id: <span class="fn">str</span>) -> <span class="fn">str</span>:
+        <span class="cm">"""Pull-based: tiny index the model sees. It can request chunks by ID."""</span>
+        session = self.get_session(user_id)
+        <span class="kw">return</span> (
+            <span class="str">f"[session] {session.get_summary()}\n"</span>
+            <span class="str">f"[episodic] {self.episodic.get_summary()}\n"</span>
+            <span class="str">f"[semantic] {self.semantic.count()} stored memories\n"</span>
+            <span class="str">f"[procedural] SOUL.md, USER.md, MEMORY.md available\n"</span>
+            <span class="str">f"To retrieve: use tool 'memory_recall' with a query."</span>
+        )
+
+    <span class="kw">def</span> <span class="fn">recall</span>(self, query: <span class="fn">str</span>, n: <span class="fn">int</span> = <span class="num">3</span>) -> <span class="fn">str</span>:
+        <span class="cm">"""Semantic search across stored memories."""</span>
+        results = self.semantic.search(query, n)
+        <span class="kw">if not</span> results:
+            <span class="kw">return</span> <span class="str">"No relevant memories found."</span>
+        <span class="kw">return</span> <span class="str">"\n---\n"</span>.join(
+            <span class="str">f"[{r['id'][:8]}] (dist={r['distance']:.2f}) {r['text']}"</span>
+            <span class="kw">for</span> r <span class="kw">in</span> results
+        )
+
+    <span class="kw">def</span> <span class="fn">store_exchange</span>(self, user_id: <span class="fn">str</span>, user_msg: <span class="fn">str</span>,
+                       bot_reply: <span class="fn">str</span>, route: <span class="fn">str</span>, tools: <span class="fn">list</span> = <span class="kw">None</span>,
+                       verified: <span class="fn">bool</span> = <span class="kw">True</span>):
+        <span class="cm"># Session</span>
+        session = self.get_session(user_id)
+        session.add(<span class="str">"user"</span>, user_msg)
+        session.add(<span class="str">"assistant"</span>, bot_reply)
+        <span class="cm"># Episodic</span>
+        self.episodic.log(user_msg, bot_reply, route, tools, verified)
+        <span class="cm"># Semantic (only store if substantial)</span>
+        <span class="kw">if</span> len(user_msg) > <span class="num">20</span>:
+            self.semantic.store(
+                <span class="str">f"User: {user_msg}\nBot: {bot_reply[:200]}"</span>,
+                metadata={<span class="str">"user_id"</span>: user_id, <span class="str">"route"</span>: route}
+            )
+</code></pre>
+</div></details>
+
+<h3>Integration into agent.py</h3>
+<pre><code># In StupidAgent.__init__:
+from src.memory.manager import MemoryManager
+self.memory = MemoryManager()
+
+# Add memory_recall tool:
+from src.tools.base import BaseTool, ToolResult
+
+class MemoryRecallTool(BaseTool):
+    name = "memory_recall"
+    description = "Search long-term memory for relevant past context."
+    args_description = "search query"
+    def __init__(self, memory_manager):
+        self.mm = memory_manager
+    def execute(self, args):
+        return ToolResult(True, self.mm.recall(args))
+
+# Register in __init__:
+self.tools["memory_recall"] = MemoryRecallTool(self.memory)
+
+# In run(), after getting answer:
+self.memory.store_exchange(user_id, user_message, answer, difficulty, tools_used, verified)
+
+# In _plan(), inject context index:
+context_index = self.memory.get_context_index(user_id)
+# Prepend to system prompt: f"Context available:\n{context_index}\n\n"</code></pre>
+
+<h3>docker-compose.yml update</h3>
+<pre><code>services:
+  stupidclaw:
+    build: .
+    container_name: stupidclaw
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data</code></pre>
+<p style="color:var(--dim)">ChromaDB runs embedded (no separate service needed). sentence-transformers downloads model on first run (~80MB).</p>
+
+<h3>requirements.txt additions</h3>
+<pre><code>chromadb>=0.5.0
+sentence-transformers>=3.0.0</code></pre>
+
+<h3>Phase 2 KPIs</h3>
+<table>
+<tr><th>Metric</th><th>Target</th></tr>
+<tr><td>Session continuity</td><td>Bot references earlier messages in same session</td></tr>
+<tr><td>Semantic recall</td><td>Query "what did I say about X?" returns relevant context</td></tr>
+<tr><td>Memory token budget</td><td>Session window stays under 6000 tokens</td></tr>
+<tr><td>Pull-based</td><td>Model sees index, not full memory dump</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 3 ═══════════════════════════════════════════════════ -->
+
+<div class="phase-header"><div class="phase-num">3</div><h1 style="border:none;margin:0">Extensibility Platform</h1></div>
+<p><span class="badge badge-blue">~25 hours</span> <span class="badge badge-orange">Depends on Phase 1 + 2</span></p>
+
+<h2>3.1 New Files</h2>
+<div class="tree">
+stupidclaw/
+├── src/
+│   ├── <b>registry.py</b>          <i># Dynamic tool registry</i>
+│   ├── <b>skills.py</b>            <i># SKILL.md loader + matcher</i>
+│   ├── <b>sessions.py</b>          <i># Multi-user session manager</i>
+│   └── <b>scheduler.py</b>         <i># Cron/heartbeat</i>
+├── data/
+│   └── skills/
+│       └── example/
+│           └── SKILL.md
+</div>
+
+<details><summary>src/registry.py — Dynamic tool registry</summary><div class="content">
+<pre><code><span class="cm"># src/registry.py</span>
+<span class="kw">import</span> importlib
+<span class="kw">import</span> logging
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">ToolRegistry</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._tools: <span class="fn">dict</span>[<span class="fn">str</span>, BaseTool] = {}
+
+    <span class="kw">def</span> <span class="fn">register</span>(self, tool: BaseTool):
+        self._tools[tool.name] = tool
+        logger.info(<span class="str">f"Registered tool: {tool.name}"</span>)
+
+    <span class="kw">def</span> <span class="fn">get</span>(self, name: <span class="fn">str</span>) -> BaseTool | <span class="kw">None</span>:
+        <span class="kw">return</span> self._tools.get(name)
+
+    <span class="kw">def</span> <span class="fn">list_tools</span>(self) -> <span class="fn">list</span>[<span class="fn">str</span>]:
+        <span class="kw">return</span> list(self._tools.keys())
+
+    <span class="kw">def</span> <span class="fn">get_schemas</span>(self) -> <span class="fn">str</span>:
+        <span class="cm">"""Compact schema string for LLM prompts."""</span>
+        <span class="kw">return</span> <span class="str">"\n"</span>.join(t.schema() <span class="kw">for</span> t <span class="kw">in</span> self._tools.values())
+
+    <span class="kw">def</span> <span class="fn">match</span>(self, query: <span class="fn">str</span>) -> <span class="fn">list</span>[<span class="fn">str</span>]:
+        <span class="cm">"""Simple keyword matching for tool selection."""</span>
+        query_lower = query.lower()
+        matches = []
+        <span class="kw">for</span> name, tool <span class="kw">in</span> self._tools.items():
+            <span class="kw">if</span> any(w <span class="kw">in</span> query_lower <span class="kw">for</span> w <span class="kw">in</span> [name] + tool.description.lower().split()[:<span class="num">5</span>]):
+                matches.append(name)
+        <span class="kw">return</span> matches
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, name: <span class="fn">str</span>, args: <span class="fn">str</span>):
+        tool = self.get(name)
+        <span class="kw">if not</span> tool:
+            <span class="kw">from</span> src.tools.base <span class="kw">import</span> ToolResult
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Unknown tool: {name}. Available: {self.list_tools()}"</span>)
+        <span class="kw">return</span> tool.execute(args)
+</code></pre>
+</div></details>
+
+<details><summary>src/skills.py — Skill system with SKILL.md format</summary><div class="content">
+<pre><code><span class="cm"># src/skills.py</span>
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">import</span> re
+<span class="kw">import</span> logging
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">Skill</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, path: Path):
+        self.path = path
+        self.name = path.parent.name
+        content = path.read_text()
+        <span class="cm"># Extract description from first paragraph after # header</span>
+        lines = content.split(<span class="str">"\n"</span>)
+        self.description = <span class="str">""</span>
+        <span class="kw">for</span> line <span class="kw">in</span> lines[<span class="num">1</span>:]:
+            <span class="kw">if</span> line.strip() <span class="kw">and not</span> line.startswith(<span class="str">"#"</span>):
+                self.description = line.strip()
+                <span class="kw">break</span>
+        self.content = content
+
+<span class="kw">class</span> <span class="fn">SkillManager</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, skills_dir: <span class="fn">str</span> = <span class="str">"/app/data/skills"</span>):
+        self.skills_dir = Path(skills_dir)
+        self.skills: <span class="fn">dict</span>[<span class="fn">str</span>, Skill] = {}
+        self._load_skills()
+
+    <span class="kw">def</span> <span class="fn">_load_skills</span>(self):
+        <span class="kw">if not</span> self.skills_dir.exists():
+            self.skills_dir.mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+            <span class="kw">return</span>
+        <span class="kw">for</span> skill_md <span class="kw">in</span> self.skills_dir.rglob(<span class="str">"SKILL.md"</span>):
+            <span class="kw">try</span>:
+                skill = Skill(skill_md)
+                self.skills[skill.name] = skill
+                logger.info(<span class="str">f"Loaded skill: {skill.name}"</span>)
+            <span class="kw">except</span> Exception <span class="kw">as</span> e:
+                logger.error(<span class="str">f"Failed to load skill {skill_md}: {e}"</span>)
+
+    <span class="kw">def</span> <span class="fn">match</span>(self, query: <span class="fn">str</span>) -> Skill | <span class="kw">None</span>:
+        <span class="cm">"""Simple keyword match. Returns best matching skill or None."""</span>
+        query_lower = query.lower()
+        best = <span class="kw">None</span>
+        best_score = <span class="num">0</span>
+        <span class="kw">for</span> name, skill <span class="kw">in</span> self.skills.items():
+            score = sum(<span class="num">1</span> <span class="kw">for</span> w <span class="kw">in</span> query_lower.split()
+                        <span class="kw">if</span> w <span class="kw">in</span> name.lower() <span class="kw">or</span> w <span class="kw">in</span> skill.description.lower())
+            <span class="kw">if</span> score > best_score:
+                best_score = score
+                best = skill
+        <span class="kw">return</span> best <span class="kw">if</span> best_score > <span class="num">0</span> <span class="kw">else</span> <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">get_index</span>(self) -> <span class="fn">str</span>:
+        <span class="cm">"""Compact index for pull-based context."""</span>
+        <span class="kw">if not</span> self.skills:
+            <span class="kw">return</span> <span class="str">"(no skills installed)"</span>
+        <span class="kw">return</span> <span class="str">"\n"</span>.join(<span class="str">f"- {s.name}: {s.description[:80]}"</span> <span class="kw">for</span> s <span class="kw">in</span> self.skills.values())
+</code></pre>
+</div></details>
+
+<details><summary>src/scheduler.py — APScheduler-based cron/heartbeat</summary><div class="content">
+<pre><code><span class="cm"># src/scheduler.py</span>
+<span class="kw">from</span> apscheduler.schedulers.asyncio <span class="kw">import</span> AsyncIOScheduler
+<span class="kw">from</span> apscheduler.triggers.cron <span class="kw">import</span> CronTrigger
+<span class="kw">from</span> apscheduler.triggers.interval <span class="kw">import</span> IntervalTrigger
+<span class="kw">import</span> logging
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">TaskScheduler</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.scheduler = AsyncIOScheduler()
+        self._tasks = {}
+
+    <span class="kw">def</span> <span class="fn">start</span>(self):
+        self.scheduler.start()
+        logger.info(<span class="str">"Scheduler started"</span>)
+
+    <span class="kw">def</span> <span class="fn">add_interval</span>(self, name: <span class="fn">str</span>, func, minutes: <span class="fn">int</span> = <span class="num">30</span>):
+        job = self.scheduler.add_job(func, IntervalTrigger(minutes=minutes), id=name)
+        self._tasks[name] = job
+
+    <span class="kw">def</span> <span class="fn">add_cron</span>(self, name: <span class="fn">str</span>, func, hour: <span class="fn">int</span>, minute: <span class="fn">int</span> = <span class="num">0</span>):
+        job = self.scheduler.add_job(func, CronTrigger(hour=hour, minute=minute), id=name)
+        self._tasks[name] = job
+
+    <span class="kw">def</span> <span class="fn">remove</span>(self, name: <span class="fn">str</span>):
+        <span class="kw">if</span> name <span class="kw">in</span> self._tasks:
+            self._tasks[name].remove()
+            <span class="kw">del</span> self._tasks[name]
+
+    <span class="kw">def</span> <span class="fn">list_tasks</span>(self) -> <span class="fn">list</span>:
+        <span class="kw">return</span> [{<span class="str">"name"</span>: k, <span class="str">"next_run"</span>: str(v.next_run_time)} <span class="kw">for</span> k, v <span class="kw">in</span> self._tasks.items()]
+</code></pre>
+</div></details>
+
+<h3>requirements.txt additions</h3>
+<pre><code>APScheduler>=3.10.0</code></pre>
+
+<h3>Phase 3 KPIs</h3>
+<table>
+<tr><th>Metric</th><th>Target</th></tr>
+<tr><td>Tool registration</td><td>Hot-load new tool without restart</td></tr>
+<tr><td>Skill matching</td><td>Correct skill selected for 8/10 test queries</td></tr>
+<tr><td>Multi-user isolation</td><td>Two users have independent session memories</td></tr>
+<tr><td>Scheduler fires</td><td>Heartbeat runs on schedule, logs to episodic</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 4 ═══════════════════════════════════════════════════ -->
+
+<div class="phase-header"><div class="phase-num">4</div><h1 style="border:none;margin:0">Intelligence Amplification</h1></div>
+<p><span class="badge badge-blue">~25 hours</span> <span class="badge badge-orange">Depends on Phase 1-3</span></p>
+
+<h2>4.1 New Files</h2>
+<div class="tree">
+stupidclaw/
+├── src/
+│   ├── <b>prompt_optimizer.py</b>  <i># Eval-driven prompt tuning</i>
+│   ├── <b>specialization.py</b>   <i># Aperture modes</i>
+│   └── <b>evidence.py</b>         <i># ECoRAG sufficiency loop</i>
+├── data/
+│   └── evals/
+│       ├── <b>eval_set.jsonl</b>   <i># test cases</i>
+│       └── <b>results/</b>
+</div>
+
+<details><summary>src/evidence.py — Evidence sufficiency loop (ECoRAG-style)</summary><div class="content">
+<pre><code><span class="cm"># src/evidence.py</span>
+<span class="kw">import</span> logging
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> ToolResult
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">EvidenceLoop</span>:
+    <span class="cm">"""
+    ECoRAG-style: retrieve → ask "is this enough?" → retrieve more or answer.
+    Max 3 iterations to bound cost.
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, llm_fn, search_fn, max_rounds: <span class="fn">int</span> = <span class="num">3</span>):
+        self.llm = llm_fn
+        self.search = search_fn
+        self.max_rounds = max_rounds
+
+    <span class="kw">def</span> <span class="fn">gather</span>(self, question: <span class="fn">str</span>) -> <span class="fn">str</span>:
+        evidence = []
+        query = question
+
+        <span class="kw">for</span> i <span class="kw">in</span> range(self.max_rounds):
+            <span class="cm"># Retrieve</span>
+            results = self.search(query)
+            evidence.append(results)
+
+            <span class="cm"># Sufficiency check</span>
+            evidence_text = <span class="str">"\n---\n"</span>.join(evidence)
+            verdict = self.llm([
+                {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: (
+                    <span class="str">"You are an evidence evaluator. Given a question and evidence, reply:\n"</span>
+                    <span class="str">"SUFFICIENT - if the evidence is enough to answer confidently\n"</span>
+                    <span class="str">"NEED_MORE: <refined query> - if more info is needed\n"</span>
+                    <span class="str">"Reply with ONLY one of these formats."</span>
+                )},
+                {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">f"Question: {question}\nEvidence:\n{evidence_text}"</span>}
+            ])
+
+            <span class="kw">if</span> <span class="str">"SUFFICIENT"</span> <span class="kw">in</span> verdict.upper():
+                logger.info(<span class="str">f"Evidence sufficient after {i+1} rounds"</span>)
+                <span class="kw">break</span>
+            <span class="kw">elif</span> <span class="str">"NEED_MORE"</span> <span class="kw">in</span> verdict.upper():
+                query = verdict.split(<span class="str">":"</span>, <span class="num">1</span>)[-<span class="num">1</span>].strip()
+                logger.info(<span class="str">f"Round {i+1}: need more, refined query: {query}"</span>)
+            <span class="kw">else</span>:
+                <span class="kw">break</span>
+
+        <span class="kw">return</span> <span class="str">"\n---\n"</span>.join(evidence)
+</code></pre>
+</div></details>
+
+<details><summary>src/specialization.py — Same model, different apertures</summary><div class="content">
+<pre><code><span class="cm"># src/specialization.py</span>
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="fn">ApertureMode</span>:
+    name: <span class="fn">str</span>
+    system_prompt: <span class="fn">str</span>
+    tools: <span class="fn">list</span>[<span class="fn">str</span>]          <span class="cm"># allowed tool names</span>
+    max_tokens: <span class="fn">int</span> = <span class="num">1024</span>
+    temperature: <span class="fn">float</span> = <span class="num">0.3</span>
+    max_steps: <span class="fn">int</span> = <span class="num">3</span>
+
+<span class="cm"># Pre-defined modes</span>
+MODES = {
+    <span class="str">"chat"</span>: ApertureMode(
+        name=<span class="str">"chat"</span>,
+        system_prompt=<span class="str">"You are a friendly assistant. Be brief and direct."</span>,
+        tools=[<span class="str">"calculator"</span>, <span class="str">"time"</span>],
+        max_tokens=<span class="num">512</span>,
+        temperature=<span class="num">0.7</span>,
+    ),
+    <span class="str">"research"</span>: ApertureMode(
+        name=<span class="str">"research"</span>,
+        system_prompt=<span class="str">"You are a researcher. Always cite sources. Use web_search and web_fetch."</span>,
+        tools=[<span class="str">"web_search"</span>, <span class="str">"web_fetch"</span>, <span class="str">"memory_recall"</span>],
+        max_tokens=<span class="num">2048</span>,
+        temperature=<span class="num">0.2</span>,
+        max_steps=<span class="num">5</span>,
+    ),
+    <span class="str">"code"</span>: ApertureMode(
+        name=<span class="str">"code"</span>,
+        system_prompt=<span class="str">"You are a coding assistant. Write clean, tested code. Use shell and file tools."</span>,
+        tools=[<span class="str">"shell"</span>, <span class="str">"file_read"</span>, <span class="str">"file_write"</span>, <span class="str">"calculator"</span>],
+        max_tokens=<span class="num">2048</span>,
+        temperature=<span class="num">0.1</span>,
+    ),
+    <span class="str">"memory"</span>: ApertureMode(
+        name=<span class="str">"memory"</span>,
+        system_prompt=<span class="str">"You manage the user's memory. Store and recall information."</span>,
+        tools=[<span class="str">"memory_recall"</span>, <span class="str">"file_read"</span>, <span class="str">"file_write"</span>],
+        max_tokens=<span class="num">1024</span>,
+        temperature=<span class="num">0.3</span>,
+    ),
+}
+
+<span class="kw">def</span> <span class="fn">select_mode</span>(llm_fn, message: <span class="fn">str</span>) -> ApertureMode:
+    <span class="cm">"""Let the router pick a specialization mode."""</span>
+    mode_list = <span class="str">", "</span>.join(f<span class="str">"{m.name} ({m.system_prompt[:40]})"</span> <span class="kw">for</span> m <span class="kw">in</span> MODES.values())
+    resp = llm_fn([
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">f"Pick the best mode for this message. Options: {mode_list}. Reply with ONLY the mode name."</span>},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: message}
+    ])
+    mode_name = resp.strip().lower().split()[<span class="num">0</span>] <span class="kw">if</span> resp <span class="kw">else</span> <span class="str">"chat"</span>
+    <span class="kw">return</span> MODES.get(mode_name, MODES[<span class="str">"chat"</span>])
+</code></pre>
+</div></details>
+
+<details><summary>src/prompt_optimizer.py — Eval-driven prompt tuning</summary><div class="content">
+<pre><code><span class="cm"># src/prompt_optimizer.py</span>
+<span class="kw">import</span> json
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+<span class="kw">class</span> <span class="fn">PromptOptimizer</span>:
+    <span class="cm">"""
+    Workflow:
+    1. Maintain eval_set.jsonl: {input, expected_output, tags}
+    2. Run all evals against current prompts
+    3. Score with LLM judge (0-10)
+    4. Try prompt variants, keep winners
+    """</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, eval_path: <span class="fn">str</span> = <span class="str">"/app/data/evals/eval_set.jsonl"</span>,
+                 results_dir: <span class="fn">str</span> = <span class="str">"/app/data/evals/results"</span>):
+        self.eval_path = Path(eval_path)
+        self.results_dir = Path(results_dir)
+        self.results_dir.mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">load_evals</span>(self) -> <span class="fn">list</span>:
+        <span class="kw">if not</span> self.eval_path.exists():
+            <span class="kw">return</span> []
+        <span class="kw">return</span> [json.loads(l) <span class="kw">for</span> l <span class="kw">in</span> self.eval_path.read_text().strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> l]
+
+    <span class="kw">def</span> <span class="fn">run_eval</span>(self, agent_fn, llm_judge_fn) -> <span class="fn">dict</span>:
+        <span class="cm">"""Run all evals, score with LLM judge, save results."""</span>
+        evals = self.load_evals()
+        results = []
+        total_score = <span class="num">0</span>
+
+        <span class="kw">for</span> ev <span class="kw">in</span> evals:
+            actual = agent_fn(ev[<span class="str">"input"</span>])
+            score_resp = llm_judge_fn([
+                {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">"Score 0-10 how well the actual answer matches expected. Reply ONLY with the number."</span>},
+                {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">f"Expected: {ev['expected_output']}\nActual: {actual}"</span>}
+            ])
+            <span class="kw">try</span>:
+                score = <span class="fn">int</span>(score_resp.strip())
+            <span class="kw">except</span>:
+                score = <span class="num">5</span>
+            results.append({**ev, <span class="str">"actual"</span>: actual, <span class="str">"score"</span>: score})
+            total_score += score
+
+        avg = total_score / len(results) <span class="kw">if</span> results <span class="kw">else</span> <span class="num">0</span>
+        report = {
+            <span class="str">"timestamp"</span>: datetime.utcnow().isoformat(),
+            <span class="str">"avg_score"</span>: round(avg, <span class="num">2</span>),
+            <span class="str">"total"</span>: len(results),
+            <span class="str">"results"</span>: results,
+        }
+        out = self.results_dir / <span class="str">f"eval_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"</span>
+        out.write_text(json.dumps(report, indent=<span class="num">2</span>))
+        <span class="kw">return</span> report
+</code></pre>
+</div></details>
+
+<h3>Committee-of-Clones improvements</h3>
+<pre><code># Enhanced _hard_lane in agent.py:
+# Instead of just different prompts, use different evidence slices
+
+def _hard_lane(self, message: str) -> str:
+    # 1. Get 3 different search queries from the question
+    queries_resp = self._llm([
+        {"role": "system", "content": "Generate 3 different search queries for this question. Reply JSON: [\"q1\",\"q2\",\"q3\"]"},
+        {"role": "user", "content": message}
+    ])
+    queries = self._extract_json(queries_resp) if isinstance(self._extract_json(queries_resp), list) else [message]
+    
+    # 2. Search with each query → different evidence slices
+    evidence_slices = []
+    for q in queries[:3]:
+        result = self.tools["web_search"].execute(str(q))
+        evidence_slices.append(result.output if result.success else "")
+    
+    # 3. Each clone gets different evidence
+    prompts = [
+        "Answer based on this evidence. Be thorough.",
+        "Answer based on this evidence. Be concise and precise.", 
+        "Answer based on this evidence. Consider counterarguments.",
+    ]
+    candidates = []
+    for i, prompt in enumerate(prompts):
+        evidence = evidence_slices[i] if i < len(evidence_slices) else ""
+        resp = self._llm([
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"Question: {message}\nEvidence:\n{evidence}"}
+        ])
+        candidates.append(resp)
+    
+    # 4. Judge (same as before)
+    # ... existing judge code ...
+</code></pre>
+
+<h3>Phase 4 KPIs</h3>
+<table>
+<tr><th>Metric</th><th>Target</th></tr>
+<tr><td>Eval set score</td><td>Average &gt;7/10 on 20-case eval set</td></tr>
+<tr><td>Evidence loop</td><td>Hard questions use 1.5 avg retrieval rounds</td></tr>
+<tr><td>Mode selection accuracy</td><td>Correct mode 8/10 times</td></tr>
+<tr><td>Committee diversity</td><td>3 candidates differ by &gt;30% (measured by edit distance)</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 5 ═══════════════════════════════════════════════════ -->
+
+<div class="phase-header"><div class="phase-num">5</div><h1 style="border:none;margin:0">OpenClaw Parity</h1></div>
+<p><span class="badge badge-blue">~20 hours</span> <span class="badge badge-orange">Depends on Phase 1-4</span> <span class="badge badge-purple">Stretch goal</span></p>
+
+<h2>5.1 New Files</h2>
+<div class="tree">
+stupidclaw/
+├── src/
+│   ├── <b>gateway.py</b>           <i># OpenClaw WebSocket client</i>
+│   ├── <b>subagents.py</b>         <i># Task decomposition + sub-agents</i>
+│   └── <b>browser.py</b>           <i># Playwright lite</i>
+</div>
+
+<details><summary>src/gateway.py — OpenClaw gateway WebSocket connector</summary><div class="content">
+<pre><code><span class="cm"># src/gateway.py</span>
+<span class="kw">import</span> asyncio
+<span class="kw">import</span> json
+<span class="kw">import</span> websockets
+<span class="kw">import</span> logging
+
+logger = logging.getLogger(__name__)
+
+<span class="kw">class</span> <span class="fn">GatewayClient</span>:
+    <span class="cm">"""Connect to OpenClaw gateway to reuse its channels (Telegram, Discord, etc)."""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, url: <span class="fn">str</span>, password: <span class="fn">str</span>):
+        self.url = url
+        self.password = password
+        self.ws = <span class="kw">None</span>
+
+    <span class="kw">async def</span> <span class="fn">connect</span>(self):
+        self.ws = <span class="kw">await</span> websockets.connect(self.url)
+        <span class="cm"># Authenticate</span>
+        <span class="kw">await</span> self.ws.send(json.dumps({
+            <span class="str">"type"</span>: <span class="str">"auth"</span>,
+            <span class="str">"password"</span>: self.password,
+        }))
+        resp = json.loads(<span class="kw">await</span> self.ws.recv())
+        <span class="kw">if</span> resp.get(<span class="str">"type"</span>) != <span class="str">"auth_ok"</span>:
+            <span class="kw">raise</span> ConnectionError(<span class="str">f"Gateway auth failed: {resp}"</span>)
+        logger.info(<span class="str">"Connected to OpenClaw gateway"</span>)
+
+    <span class="kw">async def</span> <span class="fn">send_message</span>(self, channel: <span class="fn">str</span>, target: <span class="fn">str</span>, text: <span class="fn">str</span>):
+        <span class="kw">await</span> self.ws.send(json.dumps({
+            <span class="str">"type"</span>: <span class="str">"message"</span>,
+            <span class="str">"action"</span>: <span class="str">"send"</span>,
+            <span class="str">"channel"</span>: channel,
+            <span class="str">"target"</span>: target,
+            <span class="str">"message"</span>: text,
+        }))
+
+    <span class="kw">async def</span> <span class="fn">listen</span>(self, handler):
+        <span class="kw">async for</span> msg <span class="kw">in</span> self.ws:
+            data = json.loads(msg)
+            <span class="kw">if</span> data.get(<span class="str">"type"</span>) == <span class="str">"message"</span>:
+                <span class="kw">await</span> handler(data)
+</code></pre>
+</div></details>
+
+<details><summary>src/subagents.py — Rule-based task decomposition</summary><div class="content">
+<pre><code><span class="cm"># src/subagents.py</span>
+<span class="kw">import</span> asyncio
+<span class="kw">import</span> logging
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Callable
+
+logger = logging.getLogger(__name__)
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="fn">SubTask</span>:
+    description: <span class="fn">str</span>
+    handler: Callable
+    args: <span class="fn">dict</span>
+
+<span class="kw">class</span> <span class="fn">SubAgentManager</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, agent):
+        self.agent = agent
+        self._running = {}
+
+    <span class="kw">def</span> <span class="fn">decompose</span>(self, task: <span class="fn">str</span>) -> <span class="fn">list</span>[SubTask]:
+        <span class="cm">"""Use LLM to break a complex task into subtasks."""</span>
+        resp = self.agent._llm([
+            {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: (
+                <span class="str">"Break this task into 2-4 independent subtasks. "</span>
+                <span class="str">'Reply JSON: [{"description":"...","tool":"web_search","args":"..."}]'</span>
+            )},
+            {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: task}
+        ])
+        parsed = self.agent._extract_json(resp)
+        <span class="kw">if</span> isinstance(parsed, <span class="fn">list</span>):
+            <span class="kw">return</span> [SubTask(s.get(<span class="str">"description"</span>, <span class="str">""</span>), self.agent._execute_tool, s) <span class="kw">for</span> s <span class="kw">in</span> parsed]
+        <span class="kw">return</span> []
+
+    <span class="kw">async def</span> <span class="fn">run_parallel</span>(self, subtasks: <span class="fn">list</span>[SubTask]) -> <span class="fn">list</span>[<span class="fn">str</span>]:
+        <span class="cm">"""Run subtasks concurrently."""</span>
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(<span class="kw">None</span>, st.handler, st.args.get(<span class="str">"tool"</span>, <span class="str">"none"</span>), st.args.get(<span class="str">"args"</span>, <span class="str">""</span>))
+            <span class="kw">for</span> st <span class="kw">in</span> subtasks
+        ]
+        <span class="kw">return await</span> asyncio.gather(*tasks)
+</code></pre>
+</div></details>
+
+<details><summary>src/browser.py — Playwright lite wrapper</summary><div class="content">
+<pre><code><span class="cm"># src/browser.py</span>
+<span class="kw">from</span> src.tools.base <span class="kw">import</span> BaseTool, ToolResult
+
+<span class="kw">class</span> <span class="fn">BrowserTool</span>(BaseTool):
+    name = <span class="str">"browser"</span>
+    description = <span class="str">"Open a URL and extract visible text content using headless Playwright."</span>
+    args_description = <span class="str">"URL to visit"</span>
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, args: <span class="fn">str</span>) -> ToolResult:
+        <span class="kw">try</span>:
+            <span class="kw">from</span> playwright.sync_api <span class="kw">import</span> sync_playwright
+            <span class="kw">with</span> sync_playwright() <span class="kw">as</span> p:
+                browser = p.chromium.launch(headless=<span class="kw">True</span>)
+                page = browser.new_page()
+                page.goto(args.strip(), timeout=<span class="num">15000</span>)
+                page.wait_for_load_state(<span class="str">"domcontentloaded"</span>)
+                text = page.inner_text(<span class="str">"body"</span>)
+                browser.close()
+                <span class="kw">return</span> ToolResult(<span class="kw">True</span>, text[:<span class="num">4000</span>])
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            <span class="kw">return</span> ToolResult(<span class="kw">False</span>, <span class="str">f"Browser error: {e}"</span>)
+</code></pre>
+</div></details>
+
+<h3>Phase 5 requirements.txt additions</h3>
+<pre><code>websockets>=12.0
+playwright>=1.40.0</code></pre>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════ SUMMARY ═══════════════════════════════════════════════════ -->
+
+<h1>📦 Final Project Structure</h1>
+<div class="tree">
+stupidclaw/
+├── .env
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── src/
+│   ├── __init__.py
+│   ├── main.py                 <i># Telegram bot entry</i>
+│   ├── agent.py                <i># Core cascade agent</i>
+│   ├── config.py               <i># Environment config</i>
+│   ├── schemas.py              <i># Pydantic schemas</i>
+│   ├── registry.py             <i># Dynamic tool registry</i>
+│   ├── skills.py               <i># Skill loader + matcher</i>
+│   ├── scheduler.py            <i># APScheduler cron</i>
+│   ├── evidence.py             <i># ECoRAG sufficiency loop</i>
+│   ├── specialization.py       <i># Aperture modes</i>
+│   ├── prompt_optimizer.py     <i># Eval pipeline</i>
+│   ├── gateway.py              <i># OpenClaw WS client</i>
+│   ├── subagents.py            <i># Task decomposition</i>
+│   ├── browser.py              <i># Playwright wrapper</i>
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── calculator.py
+│   │   ├── clock.py
+│   │   ├── web_search.py
+│   │   ├── web_fetch.py
+│   │   ├── file_ops.py
+│   │   └── shell.py
+│   └── memory/
+│       ├── __init__.py
+│       ├── session.py
+│       ├── semantic.py
+│       ├── episodic.py
+│       ├── procedural.py
+│       └── manager.py
+├── data/
+│   ├── memory/
+│   │   ├── episodes/
+│   │   ├── SOUL.md
+│   │   ├── USER.md
+│   │   └── MEMORY.md
+│   ├── chromadb/
+│   ├── skills/
+│   └── evals/
+│       ├── eval_set.jsonl
+│       └── results/
+├── tests/
+│   ├── test_tools.py
+│   ├── test_memory.py
+│   └── test_agent.py
+└── docs/
+    ├── ARCHITECTURE.md
+    └── implementation-plan.html
+</div>
+
+<h1>📋 Complete requirements.txt</h1>
+<pre><code># Core
+aiogram>=3.0.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# Phase 1: Tools
+duckduckgo-search>=7.0.0
+readability-lxml>=0.8.1
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Phase 2: Memory
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+
+# Phase 3: Platform
+APScheduler>=3.10.0
+
+# Phase 5: Parity
+websockets>=12.0
+playwright>=1.40.0
+
+# Dev
+pytest>=8.0.0</code></pre>
+
+<h1>🐳 Complete docker-compose.yml</h1>
+<pre><code>services:
+  stupidclaw:
+    build: .
+    container_name: stupidclaw
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FILE_SANDBOX=/app/data
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    # Playwright needs these for headless Chrome (Phase 5):
+    # shm_size: '256m'
+    # security_opt:
+    #   - seccomp=unconfined</code></pre>
+
+<h1>📊 Timeline & Dependencies</h1>
+<div class="card">
+<table>
+<tr><th>Phase</th><th>Hours</th><th>Depends On</th><th>Can Start</th></tr>
+<tr><td><span class="badge badge-green">Phase 1</span> Core Tools</td><td>25h</td><td>None</td><td>Now</td></tr>
+<tr><td><span class="badge badge-blue">Phase 2</span> Memory</td><td>30h</td><td>Phase 1 (file_ops)</td><td>After Phase 1</td></tr>
+<tr><td><span class="badge badge-orange">Phase 3</span> Extensibility</td><td>25h</td><td>Phase 1 + 2</td><td>After Phase 2</td></tr>
+<tr><td><span class="badge badge-purple">Phase 4</span> Intelligence</td><td>25h</td><td>Phase 1-3</td><td>After Phase 3</td></tr>
+<tr><td><span class="badge badge-red">Phase 5</span> Parity</td><td>20h</td><td>Phase 1-4</td><td>After Phase 4</td></tr>
+<tr><td><strong>TOTAL</strong></td><td><strong>~125h</strong></td><td colspan="2">~6 weeks at 20h/week</td></tr>
+</table>
+</div>
+
+<h1>🔄 Migration Path</h1>
+<div class="card">
+<ol>
+<li><strong>Phase 1:</strong> Extract existing calculator/time from agent.py → tools/. Add new tools. Update <code>_execute_tool</code> and <code>_plan</code>. Zero downtime — backward compatible.</li>
+<li><strong>Phase 2:</strong> Add memory module. Wrap <code>run()</code> to accept <code>user_id</code>, store exchanges after each call. Add <code>memory_recall</code> tool. Session memory is opt-in (old callers still work with default user_id).</li>
+<li><strong>Phase 3:</strong> Replace <code>self.tools</code> dict with <code>ToolRegistry</code>. Add skill loader. Wrap <code>main.py</code> handler to pass user_id from Telegram message. Add scheduler startup in <code>main()</code>.</li>
+<li><strong>Phase 4:</strong> Add specialization modes to router. Replace hard_lane with evidence-backed committee. Create eval_set.jsonl from real user queries collected in Phase 2.</li>
+<li><strong>Phase 5:</strong> Add gateway.py as alternative to direct Telegram. Browser tool registers like any other tool.</li>
+</ol>
+</div>
+
+<h1>🎯 Success KPIs (Overall)</h1>
+<table>
+<tr><th>Metric</th><th>Phase 1</th><th>Phase 3</th><th>Phase 5</th></tr>
+<tr><td>Tool count</td><td>8</td><td>10+ (dynamic)</td><td>12+</td></tr>
+<tr><td>Answer quality (eval avg)</td><td>—</td><td>—</td><td>&gt;7/10</td></tr>
+<tr><td>Latency (easy query)</td><td>&lt;1s</td><td>&lt;1s</td><td>&lt;1s</td></tr>
+<tr><td>Latency (hard query)</td><td>&lt;5s</td><td>&lt;8s</td><td>&lt;10s</td></tr>
+<tr><td>Cost per query</td><td>$0</td><td>$0</td><td>$0 (Groq free tier)</td></tr>
+<tr><td>Memory recall accuracy</td><td>—</td><td>&gt;70%</td><td>&gt;80%</td></tr>
+</table>
+
+<hr>
+<p style="color:var(--dim);text-align:center;margin-top:40px">StupidClaw · Built cheap, built smart · Groq + llama-4-scout · $0/month</p>
+
+</body>
+</html>

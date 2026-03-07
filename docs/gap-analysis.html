@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StupidClaw Gap Analysis: Path to OpenClaw Parity</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: #f7fafc;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1a202c;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-bottom: 4px solid #3182ce;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3182ce;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #4a5568;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background: #3182ce;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-missing {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .status-basic {
+            background: #fefcbf;
+            color: #744210;
+        }
+        
+        .status-complete {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .priority {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .priority-critical {
+            background: #fc8181;
+            color: white;
+        }
+        
+        .priority-high {
+            background: #f6ad55;
+            color: white;
+        }
+        
+        .priority-medium {
+            background: #68d391;
+            color: white;
+        }
+        
+        .priority-low {
+            background: #90cdf4;
+            color: white;
+        }
+        
+        .card {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3182ce;
+        }
+        
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .cost-table {
+            background: #f7fafc;
+            border: 2px solid #cbd5e0;
+        }
+        
+        .implementation-box {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .phase {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .phase h3 {
+            color: white;
+            margin-top: 0;
+        }
+        
+        .warning {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #f0fff4;
+            border-left: 4px solid #68d391;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .toc {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .toc a {
+            color: #3182ce;
+            text-decoration: none;
+            display: block;
+            padding: 5px 0;
+        }
+        
+        .toc a:hover {
+            color: #2c5282;
+            text-decoration: underline;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>StupidClaw Gap Analysis</h1>
+        <p class="subtitle">Comprehensive roadmap to match OpenClaw capabilities with free LLMs (Groq llama-4-scout-17b)</p>
+        <p><strong>Generated:</strong> March 6, 2026 | <strong>Target:</strong> Full OpenClaw parity on zero budget</p>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <a href="#gap-table">1. Capability Gap Table</a>
+            <a href="#tool-priority">2. Tool Implementation Priority</a>
+            <a href="#memory">3. Memory Architecture</a>
+            <a href="#context">4. Context Packing Strategy</a>
+            <a href="#search">5. Real Web Search Integration</a>
+            <a href="#frameworks">6. Agent Frameworks for Small Models</a>
+            <a href="#verification">7. Verification & Grounding</a>
+            <a href="#roadmap">8. Implementation Roadmap</a>
+        </div>
+
+        <h2 id="gap-table">1. Capability Gap Table</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature Category</th>
+                    <th>OpenClaw Has</th>
+                    <th>StupidClaw Current State</th>
+                    <th>What's Needed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Web Search</strong></td>
+                    <td>Real web search via multiple providers (DuckDuckGo, Exa, Perplexity)</td>
+                    <td>Simulated search (fake data)</td>
+                    <td>Real search API integration (free tier: SearXNG, DuckDuckGo scraper, or Brave API)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>File Operations</strong></td>
+                    <td>Read/write/edit files anywhere on system</td>
+                    <td>None</td>
+                    <td>Sandboxed file access with read/write/edit tools</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Shell Execution</strong></td>
+                    <td>Run arbitrary shell commands with output capture</td>
+                    <td>None</td>
+                    <td>Sandboxed shell execution (Docker or subprocess with restrictions)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Browser Control</strong></td>
+                    <td>Full browser automation (Playwright, nodriver)</td>
+                    <td>None</td>
+                    <td>Lightweight browser automation or web scraping (requests + BeautifulSoup as MVP)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Image Analysis</strong></td>
+                    <td>Vision models (Claude Sonnet, GPT-4V)</td>
+                    <td>None</td>
+                    <td>Free vision API (Groq LLaVA, Qwen2-VL-7B local, or API via Together.ai free tier)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Time/Date</strong></td>
+                    <td>Real-time clock access</td>
+                    <td>Working tool (datetime)</td>
+                    <td>✓ Already implemented</td>
+                    <td><span class="status status-complete">Complete</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Calculator</strong></td>
+                    <td>Python eval for math</td>
+                    <td>Working tool (basic calc)</td>
+                    <td>✓ Already implemented</td>
+                    <td><span class="status status-complete">Complete</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Session Memory</strong></td>
+                    <td>Hot session context (in-memory)</td>
+                    <td>Basic conversation history</td>
+                    <td>Structured session memory with token management</td>
+                    <td><span class="status status-basic">Basic</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Long-term Memory</strong></td>
+                    <td>MEMORY.md + daily logs + semantic search (FAISS)</td>
+                    <td>None</td>
+                    <td>File-based memory + semantic vector DB (ChromaDB or FAISS)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Context Engineering</strong></td>
+                    <td>SOUL.md, USER.md, AGENTS.md auto-injected</td>
+                    <td>None</td>
+                    <td>Config files + smart context injection (priority-based)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-turn Conversations</strong></td>
+                    <td>Full session state with memory</td>
+                    <td>Basic history (token-limited)</td>
+                    <td>Summarization + sliding window + semantic retrieval</td>
+                    <td><span class="status status-basic">Basic</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Cron Jobs</strong></td>
+                    <td>Scheduled tasks with results delivery</td>
+                    <td>None</td>
+                    <td>Simple cron wrapper + result storage (Phase 3)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Sub-agent Spawning</strong></td>
+                    <td>Recursive agent delegation</td>
+                    <td>None</td>
+                    <td>Multi-step task delegation system (Phase 3)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Channel Adapters</strong></td>
+                    <td>Telegram, Discord, WhatsApp, etc.</td>
+                    <td>None (CLI only)</td>
+                    <td>Simple webhook receiver + message formatter (Phase 3)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Skill System</strong></td>
+                    <td>Modular skills loaded on-demand</td>
+                    <td>None</td>
+                    <td>Simple plugin system (Python modules dynamically imported)</td>
+                    <td><span class="status status-missing">Missing</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="tool-priority">2. Tool Implementation Priority</h2>
+        
+        <div class="info">
+            <strong>Prioritization Criteria:</strong> Impact on usefulness × Ease of implementation ÷ Cost
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Tool</th>
+                    <th>Priority</th>
+                    <th>Why It Matters</th>
+                    <th>Implementation Complexity</th>
+                    <th>Est. Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Web Search</strong></td>
+                    <td><span class="priority priority-critical">Critical</span></td>
+                    <td>Agent is useless without real information retrieval. Biggest capability gap.</td>
+                    <td>Low (API wrapper or scraper)</td>
+                    <td>2-4 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>File Read/Write</strong></td>
+                    <td><span class="priority priority-critical">Critical</span></td>
+                    <td>Essential for memory, code editing, data persistence. Foundation for everything else.</td>
+                    <td>Low (Python built-ins + sandboxing)</td>
+                    <td>3-5 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Session Memory</strong></td>
+                    <td><span class="priority priority-high">High</span></td>
+                    <td>Multi-turn conversations are critical for usefulness. Without memory, it's just a single-shot LLM.</td>
+                    <td>Medium (summarization + windowing)</td>
+                    <td>4-6 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Shell Execution</strong></td>
+                    <td><span class="priority priority-high">High</span></td>
+                    <td>Massively expands capabilities: run scripts, install packages, system queries, etc.</td>
+                    <td>Medium (subprocess + security)</td>
+                    <td>4-6 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Semantic Memory (RAG)</strong></td>
+                    <td><span class="priority priority-high">High</span></td>
+                    <td>Long-term context retrieval. Necessary for remembering past conversations and user preferences.</td>
+                    <td>Medium (ChromaDB + embeddings)</td>
+                    <td>6-8 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Context Engineering</strong></td>
+                    <td><span class="priority priority-medium">Medium</span></td>
+                    <td>Personality, user prefs, system knowledge. Makes agent feel personalized.</td>
+                    <td>Low (config files + injection)</td>
+                    <td>2-3 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Web Scraping</strong></td>
+                    <td><span class="priority priority-medium">Medium</span></td>
+                    <td>Read specific web pages. Complements search. Useful for extracting structured data.</td>
+                    <td>Low (requests + BeautifulSoup)</td>
+                    <td>2-3 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Image Analysis</strong></td>
+                    <td><span class="priority priority-medium">Medium</span></td>
+                    <td>Vision capabilities. Useful for screenshots, diagrams, photos. Not critical for most tasks.</td>
+                    <td>Medium (API integration)</td>
+                    <td>3-4 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Browser Automation</strong></td>
+                    <td><span class="priority priority-low">Low</span></td>
+                    <td>Full web interaction. High value but complex. Can be deferred; web scraping covers 80% of use cases.</td>
+                    <td>High (Playwright/Selenium)</td>
+                    <td>10-15 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Cron/Scheduling</strong></td>
+                    <td><span class="priority priority-low">Low</span></td>
+                    <td>Proactive reminders/checks. Nice-to-have, not essential for MVP.</td>
+                    <td>Medium (cron wrapper + state)</td>
+                    <td>5-7 hours</td>
+                </tr>
+                <tr>
+                    <td><strong>Sub-agent Spawning</strong></td>
+                    <td><span class="priority priority-low">Low</span></td>
+                    <td>Complex task delegation. Advanced feature, can be handled by multi-step reasoning initially.</td>
+                    <td>High (recursion + coordination)</td>
+                    <td>8-12 hours</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="success">
+            <strong>Quick Win Strategy:</strong> Implement Web Search + File Ops + Session Memory first. These 3 tools unlock 70% of OpenClaw's usefulness.
+        </div>
+
+        <h2 id="memory">3. Memory Architecture</h2>
+        
+        <p>Small models (4K-8K context) need <strong>aggressive memory management</strong>. Here's a 4-tier system that's cheap and effective:</p>
+
+        <h3>Tier 1: Hot Session Memory (In-Memory)</h3>
+        <div class="implementation-box">
+            <p><strong>What:</strong> Current conversation context (last 5-10 messages)</p>
+            <p><strong>Storage:</strong> Python list/dict in RAM</p>
+            <p><strong>Token Budget:</strong> ~2K tokens max</p>
+            <p><strong>Strategy:</strong> Sliding window. When context fills, summarize oldest messages and move to Tier 2.</p>
+            <p><strong>Implementation:</strong></p>
+            <code>
+                class HotMemory:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;def __init__(self, max_tokens=2000):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.messages = []  # [(role, content, timestamp)]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.max_tokens = max_tokens<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;def add(self, role, content):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Add message, trim oldest if over budget<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Call summarize() on trimmed messages → move to Tier 2
+            </code>
+        </div>
+
+        <h3>Tier 2: Semantic Memory (Vector DB)</h3>
+        <div class="implementation-box">
+            <p><strong>What:</strong> Searchable long-term memory of conversations, facts, user preferences</p>
+            <p><strong>Storage:</strong> ChromaDB (SQLite-based, zero-cost, local)</p>
+            <p><strong>Embeddings:</strong> Free options:
+                <ul>
+                    <li><code>sentence-transformers/all-MiniLM-L6-v2</code> (384-dim, fast, local)</li>
+                    <li>Voyage AI free tier (1M tokens/month)</li>
+                    <li>Groq + llama-guard-3-8b (text embeddings via hidden states)</li>
+                </ul>
+            </p>
+            <p><strong>Strategy:</strong> Index every message chunk. On new query, semantic search retrieves top 3-5 relevant memories.</p>
+            <p><strong>Query Pattern:</strong></p>
+            <code>
+                # User asks: "What did we discuss about Python last week?"<br>
+                relevant = semantic_search("Python discussion last week", limit=5)<br>
+                # Inject into context: "Relevant memories: {relevant}"
+            </code>
+        </div>
+
+        <h3>Tier 3: Episodic Memory (Structured Logs)</h3>
+        <div class="implementation-box">
+            <p><strong>What:</strong> Daily logs, task completions, events (like OpenClaw's daily .md files)</p>
+            <p><strong>Storage:</strong> JSON or SQLite (e.g., <code>memory/YYYY-MM-DD.json</code>)</p>
+            <p><strong>Schema:</strong></p>
+            <code>
+                {<br>
+                &nbsp;&nbsp;"date": "2026-03-06",<br>
+                &nbsp;&nbsp;"events": [<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;{"time": "14:30", "type": "task_completed", "task": "Draft email", "outcome": "success"},<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;{"time": "15:45", "type": "search", "query": "Python asyncio", "results_count": 8}<br>
+                &nbsp;&nbsp;]<br>
+                }
+            </code>
+            <p><strong>Strategy:</strong> Log every action. Retrieve recent logs (last 7 days) on session start. Search by date/type/keyword.</p>
+        </div>
+
+        <h3>Tier 4: Procedural Memory (Learned Patterns)</h3>
+        <div class="implementation-box">
+            <p><strong>What:</strong> Reusable snippets, shortcuts, user preferences (like OpenClaw's MEMORY.md)</p>
+            <p><strong>Storage:</strong> Single <code>MEMORY.md</code> or <code>memory.json</code> file</p>
+            <p><strong>Content Examples:</strong>
+                <ul>
+                    <li>User prefers Python over JavaScript</li>
+                    <li>User's timezone: GMT+5</li>
+                    <li>Common commands: <code>git commit -am</code></li>
+                    <li>Lessons learned: "Always validate API responses before parsing"</li>
+                </ul>
+            </p>
+            <p><strong>Strategy:</strong> Always inject into system prompt. Manually curated (agent suggests updates, user approves).</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Memory Architecture Summary</div>
+            <table>
+                <tr>
+                    <th>Tier</th>
+                    <th>Storage</th>
+                    <th>Size</th>
+                    <th>Retrieval</th>
+                    <th>Cost</th>
+                </tr>
+                <tr>
+                    <td>Hot Session</td>
+                    <td>RAM (list)</td>
+                    <td>~2K tokens</td>
+                    <td>Always loaded</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>Semantic</td>
+                    <td>ChromaDB</td>
+                    <td>Unlimited</td>
+                    <td>Vector search (5-10ms)</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>Episodic</td>
+                    <td>JSON/SQLite</td>
+                    <td>Unlimited</td>
+                    <td>Date/keyword filter</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>Procedural</td>
+                    <td>MEMORY.md</td>
+                    <td>~500 tokens</td>
+                    <td>Always in system prompt</td>
+                    <td>$0</td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 id="context">4. Context Packing Strategy</h2>
+        
+        <div class="warning">
+            <strong>The Small Context Window Problem:</strong> Groq llama-4-scout-17b has ~8K tokens. After system prompt (~1K) and response budget (~1K), you have only ~6K for conversation history, memory, tool outputs, and instructions.
+        </div>
+
+        <h3>Smart Context Budget Allocation</h3>
+        <table class="cost-table">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Token Budget</th>
+                    <th>Strategy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>System Prompt</strong></td>
+                    <td>600-800</td>
+                    <td>Keep concise. Define agent role, tool usage rules, response format.</td>
+                </tr>
+                <tr>
+                    <td><strong>Procedural Memory</strong></td>
+                    <td>300-500</td>
+                    <td>MEMORY.md equivalent. User prefs, shortcuts, key facts. Always included.</td>
+                </tr>
+                <tr>
+                    <td><strong>Semantic Retrieval</strong></td>
+                    <td>500-800</td>
+                    <td>Top 3-5 relevant past messages. Query-based. Optional.</td>
+                </tr>
+                <tr>
+                    <td><strong>Recent Messages</strong></td>
+                    <td>2000-3000</td>
+                    <td>Last 5-10 turns. Sliding window with summarization.</td>
+                </tr>
+                <tr>
+                    <td><strong>Tool Outputs</strong></td>
+                    <td>1000-1500</td>
+                    <td>Truncate long outputs. Summarize web pages. Compress JSON.</td>
+                </tr>
+                <tr>
+                    <td><strong>Response Budget</strong></td>
+                    <td>800-1200</td>
+                    <td>Reserve for agent's reasoning + response.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Context Compression Techniques</h3>
+
+        <div class="implementation-box">
+            <strong>1. Message Summarization (Aggressive):</strong>
+            <p>When conversation exceeds budget, summarize oldest messages:</p>
+            <code>
+                # Before: 10 messages × 200 tokens = 2000 tokens<br>
+                # After: 1 summary × 150 tokens + 5 recent messages × 200 = 1150 tokens
+            </code>
+            <p><strong>Free summarization:</strong> Groq llama-3.1-8b (fast, free) or local Phi-3.5-mini (3.8B, CPU-friendly)</p>
+        </div>
+
+        <div class="implementation-box">
+            <strong>2. Semantic Chunking:</strong>
+            <p>Split long messages into topic-based chunks. Store in vector DB. Retrieve only relevant chunks.</p>
+            <code>
+                # Instead of: "Here's a 2000-token web page..."<br>
+                # Store: 10 chunks × 200 tokens, retrieve top 3 relevant chunks = 600 tokens
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>3. Tool Output Truncation:</strong>
+            <p>Web searches return 10 results? Truncate to top 3. Code output 500 lines? Show first 50 + last 50.</p>
+            <code>
+                def truncate_output(text, max_tokens=500):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if count_tokens(text) > max_tokens:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return text[:max_tokens*4] + "\n... [truncated]"<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return text
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>4. Priority-Based Loading:</strong>
+            <p>Not every message is equally important. Prioritize:</p>
+            <ol>
+                <li><strong>Current user message</strong> (highest priority)</li>
+                <li><strong>Last agent response</strong> (for continuity)</li>
+                <li><strong>Tool outputs</strong> (if referenced in current message)</li>
+                <li><strong>Semantic memories</strong> (query-relevant)</li>
+                <li><strong>Recent messages</strong> (fill remaining space)</li>
+            </ol>
+        </div>
+
+        <h2 id="search">5. Real Web Search Integration</h2>
+        
+        <h3>Free Web Search API Options (March 2026)</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Free Tier</th>
+                    <th>Pros</th>
+                    <th>Cons</th>
+                    <th>Difficulty</th>
+                    <th>Recommended?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>SearXNG</strong><br>(self-hosted)</td>
+                    <td>Unlimited (self-hosted)</td>
+                    <td>
+                        • 100% free forever<br>
+                        • No rate limits<br>
+                        • Aggregates Google, Bing, DDG<br>
+                        • Privacy-focused
+                    </td>
+                    <td>
+                        • Requires server setup<br>
+                        • Maintenance overhead<br>
+                        • Can get IP-blocked by engines
+                    </td>
+                    <td>Medium</td>
+                    <td><span class="status status-complete">⭐ Best</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Brave Search API</strong></td>
+                    <td>2,000 queries/month<br>(~67/day)</td>
+                    <td>
+                        • Official API<br>
+                        • Reliable<br>
+                        • Good results<br>
+                        • No credit card for free tier
+                    </td>
+                    <td>
+                        • Limited quota<br>
+                        • Requires API key signup
+                    </td>
+                    <td>Low</td>
+                    <td><span class="status status-complete">⭐ Recommended</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Tavily AI</strong></td>
+                    <td>1,000 searches/month<br>(~33/day)</td>
+                    <td>
+                        • AI-optimized results<br>
+                        • Structured output<br>
+                        • No credit card
+                    </td>
+                    <td>
+                        • Lower quota<br>
+                        • Newer service
+                    </td>
+                    <td>Low</td>
+                    <td><span class="status status-complete">Good</span></td>
+                </tr>
+                <tr>
+                    <td><strong>DuckDuckGo</strong><br>(scraping)</td>
+                    <td>Unlimited (if not blocked)</td>
+                    <td>
+                        • No API key needed<br>
+                        • Simple HTML scraping<br>
+                        • Good privacy
+                    </td>
+                    <td>
+                        • No official API<br>
+                        • Can break with UI changes<br>
+                        • Rate limiting risk
+                    </td>
+                    <td>Low-Medium</td>
+                    <td><span class="status status-basic">Backup option</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Serper API</strong></td>
+                    <td>2,500 queries/month<br>(~83/day)</td>
+                    <td>
+                        • Google results<br>
+                        • Reliable<br>
+                        • Structured data
+                    </td>
+                    <td>
+                        • Requires credit card<br>
+                        • Auto-billing after free tier
+                    </td>
+                    <td>Low</td>
+                    <td><span class="status status-basic">Risky (billing)</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Exa.ai</strong></td>
+                    <td>1,000 searches/month</td>
+                    <td>
+                        • Neural search (semantic)<br>
+                        • Good for research<br>
+                        • Filters (domain, date)
+                    </td>
+                    <td>
+                        • Lower quota<br>
+                        • More specialized (not general web search)
+                    </td>
+                    <td>Low</td>
+                    <td><span class="status status-basic">Niche use</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Recommended Implementation Strategy</h3>
+
+        <div class="phase">
+            <h3>Phase 1: Brave Search API (MVP)</h3>
+            <p><strong>Why:</strong> Easiest to implement, reliable, no credit card needed.</p>
+            <p><strong>Code:</strong></p>
+            <code style="background: #4a5568; color: #68d391; display: block; padding: 15px; border-radius: 4px; overflow-x: auto;">
+import requests<br><br>
+def brave_search(query, count=5):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;url = "https://api.search.brave.com/res/v1/web/search"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;headers = {"X-Subscription-Token": BRAVE_API_KEY}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;params = {"q": query, "count": count}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;response = requests.get(url, headers=headers, params=params)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;results = response.json()["web"]["results"]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return [{"title": r["title"], "url": r["url"], "snippet": r["description"]} for r in results]
+            </code>
+            <p><strong>Effort:</strong> 1-2 hours</p>
+        </div>
+
+        <div class="phase">
+            <h3>Phase 2: DuckDuckGo Scraper (Backup)</h3>
+            <p><strong>Why:</strong> No rate limits, no API key. Use when Brave quota exhausted.</p>
+            <p><strong>Code:</strong> Use <code>duckduckgo-search</code> Python library (actively maintained, handles scraping)</p>
+            <code style="background: #4a5568; color: #68d391; display: block; padding: 15px; border-radius: 4px;">
+from duckduckgo_search import DDGS<br><br>
+def ddg_search(query, max_results=5):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;with DDGS() as ddgs:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;results = list(ddgs.text(query, max_results=max_results))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return [{"title": r["title"], "url": r["href"], "snippet": r["body"]} for r in results]
+            </code>
+            <p><strong>Effort:</strong> 1 hour</p>
+        </div>
+
+        <div class="phase">
+            <h3>Phase 3: SearXNG (Self-Hosted, Optional)</h3>
+            <p><strong>Why:</strong> Unlimited searches, aggregates multiple engines, best long-term solution.</p>
+            <p><strong>Setup:</strong></p>
+            <ol>
+                <li>Deploy SearXNG via Docker (<code>docker run -p 8080:8080 searxng/searxng</code>)</li>
+                <li>Configure engines (Google, Bing, DDG)</li>
+                <li>Query via <code>http://localhost:8080/search?q={query}&format=json</code></li>
+            </ol>
+            <p><strong>Effort:</strong> 3-4 hours (one-time setup)</p>
+        </div>
+
+        <h2 id="frameworks">6. Agent Frameworks for Small Models</h2>
+        
+        <div class="info">
+            <strong>Key Insight:</strong> Most agent frameworks (LangChain, AutoGPT) are built for GPT-4. Small models need simpler patterns: <strong>ReAct (Reasoning + Acting)</strong> is the proven pattern.
+        </div>
+
+        <h3>Framework Comparison</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Framework</th>
+                    <th>Small Model Support</th>
+                    <th>Pros</th>
+                    <th>Cons</th>
+                    <th>Best For</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>smolagents</strong><br>(HuggingFace)</td>
+                    <td>⭐⭐⭐⭐⭐<br>Designed for small models</td>
+                    <td>
+                        • Code-based actions (not JSON)<br>
+                        • Works well with 7B-70B models<br>
+                        • Simple architecture (~1000 LOC)<br>
+                        • Hub integrations
+                    </td>
+                    <td>
+                        • Relatively new<br>
+                        • Smaller ecosystem
+                    </td>
+                    <td><span class="status status-complete">⭐ Recommended</span></td>
+                </tr>
+                <tr>
+                    <td><strong>ReAct Pattern</strong><br>(DIY)</td>
+                    <td>⭐⭐⭐⭐⭐<br>Works with any model</td>
+                    <td>
+                        • Simple: prompt + parse + execute loop<br>
+                        • Full control<br>
+                        • No dependencies<br>
+                        • Proven by research
+                    </td>
+                    <td>
+                        • Requires manual prompt engineering<br>
+                        • No ecosystem
+                    </td>
+                    <td><span class="status status-complete">⭐ Best for learning</span></td>
+                </tr>
+                <tr>
+                    <td><strong>DSPy</strong><br>(Stanford)</td>
+                    <td>⭐⭐⭐⭐<br>Optimization-focused</td>
+                    <td>
+                        • Automatic prompt optimization<br>
+                        • Compile pipelines<br>
+                        • Good for small models with limited reasoning
+                    </td>
+                    <td>
+                        • Steep learning curve<br>
+                        • Overkill for simple agents
+                    </td>
+                    <td>Good for advanced optimization</td>
+                </tr>
+                <tr>
+                    <td><strong>LangChain</strong></td>
+                    <td>⭐⭐<br>GPT-4 optimized</td>
+                    <td>
+                        • Huge ecosystem<br>
+                        • Many integrations<br>
+                        • Active community
+                    </td>
+                    <td>
+                        • Heavy abstraction layers<br>
+                        • Poor performance with small models<br>
+                        • Debugging nightmare
+                    </td>
+                    <td>Avoid for small models</td>
+                </tr>
+                <tr>
+                    <td><strong>AutoGPT / BabyAGI</strong></td>
+                    <td>⭐<br>Requires GPT-4</td>
+                    <td>
+                        • Autonomous<br>
+                        • Multi-step planning
+                    </td>
+                    <td>
+                        • Designed for GPT-4<br>
+                        • Too complex for small models<br>
+                        • High token usage
+                    </td>
+                    <td>Not suitable</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Recommended: ReAct Pattern (Simple Implementation)</h3>
+
+        <div class="implementation-box">
+            <p><strong>The ReAct Pattern:</strong> Reasoning (think) + Acting (use tools) in a loop.</p>
+            
+            <code style="background: #2d3748; color: #68d391; display: block; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre;">
+# Pseudo-code for ReAct agent
+tools = {
+    "web_search": web_search_function,
+    "read_file": read_file_function,
+    "write_file": write_file_function,
+    "shell": shell_exec_function
+}
+
+def react_agent(user_query, max_steps=5):
+    context = [{"role": "system", "content": SYSTEM_PROMPT}]
+    context.append({"role": "user", "content": user_query})
+    
+    for step in range(max_steps):
+        # Step 1: Reasoning (LLM thinks)
+        response = llm.generate(context)
+        
+        # Step 2: Parse action
+        action = parse_action(response)  # Extract: {"tool": "web_search", "args": {"query": "..."}}
+        
+        if action["tool"] == "final_answer":
+            return action["args"]["answer"]
+        
+        # Step 3: Execute tool
+        if action["tool"] in tools:
+            result = tools[action["tool"]](**action["args"])
+            context.append({"role": "assistant", "content": response})
+            context.append({"role": "user", "content": f"Observation: {result}"})
+        else:
+            context.append({"role": "user", "content": "Error: Unknown tool"})
+    
+    return "Max steps reached without answer."
+            </code>
+        </div>
+
+        <div class="success">
+            <strong>Why ReAct Works for Small Models:</strong>
+            <ul>
+                <li><strong>Simple loop:</strong> No complex planning, just "think → act → observe" repeatedly</li>
+                <li><strong>Explicit reasoning:</strong> Forces model to explain its thinking before acting (reduces errors)</li>
+                <li><strong>Proven:</strong> Research shows ReAct outperforms chain-of-thought for tasks requiring external tools</li>
+                <li><strong>Few-shot learnable:</strong> Small models can learn ReAct from 2-3 examples</li>
+            </ul>
+        </div>
+
+        <h2 id="verification">7. Verification & Grounding</h2>
+        
+        <div class="warning">
+            <strong>The Hallucination Problem:</strong> Small models like llama-4-scout-17b hallucinate more than GPT-4. You MUST implement verification layers.
+        </div>
+
+        <h3>Grounding Strategies</h3>
+
+        <div class="implementation-box">
+            <strong>1. Tool Output Verification (Automatic):</strong>
+            <p>Always show tool outputs to the model. Force it to ground responses in observations.</p>
+            <code>
+                # BAD: Let model answer without grounding<br>
+                "What's the weather?" → Model hallucinates "It's sunny"<br><br>
+                # GOOD: Ground in tool output<br>
+                "What's the weather?" → web_search("weather") → "Observation: Rainy, 15°C" → Model: "It's rainy and 15°C"
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>2. Constrained Output Formats (Force Structure):</strong>
+            <p>Don't let model free-form respond. Force JSON/structured output.</p>
+            <code>
+                # System prompt:<br>
+                "You must respond in JSON format: {"reasoning": "...", "action": {"tool": "...", "args": {...}}}"<br><br>
+                # This prevents rambling and hallucination
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>3. Fact-Checking via Search (For Critical Claims):</strong>
+            <p>When model makes a factual claim, automatically verify via web search.</p>
+            <code>
+                # Model says: "Python 3.12 was released in October 2023"<br>
+                # Auto-verify: web_search("Python 3.12 release date")<br>
+                # If mismatch: Flag to user OR force model to correct
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>4. Confidence Scores (Explicit Uncertainty):</strong>
+            <p>Force model to rate confidence (1-5) on each response. Warn user if confidence < 3.</p>
+            <code>
+                # Output format:<br>
+                {"answer": "...", "confidence": 4, "sources": ["url1", "url2"]}
+            </code>
+        </div>
+
+        <div class="implementation-box">
+            <strong>5. Human-in-the-Loop (For High-Stakes Actions):</strong>
+            <p>Require confirmation before destructive actions (file deletion, API calls, purchases).</p>
+            <code>
+                # Agent wants to: delete_file("important.txt")<br>
+                # System: "Confirm? [y/n]"<br>
+                # Only execute if user approves
+            </code>
+        </div>
+
+        <h3>Hallucination Mitigation Checklist</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Technique</th>
+                    <th>Impact</th>
+                    <th>Implementation Effort</th>
+                    <th>When to Use</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Tool grounding (force observations)</td>
+                    <td>High</td>
+                    <td>Low (built into ReAct)</td>
+                    <td>Always</td>
+                </tr>
+                <tr>
+                    <td>Structured outputs (JSON)</td>
+                    <td>High</td>
+                    <td>Low (prompt engineering)</td>
+                    <td>Always</td>
+                </tr>
+                <tr>
+                    <td>Fact-checking via search</td>
+                    <td>Medium</td>
+                    <td>Medium (auto-search hook)</td>
+                    <td>Critical facts only</td>
+                </tr>
+                <tr>
+                    <td>Confidence scores</td>
+                    <td>Medium</td>
+                    <td>Low (add to output schema)</td>
+                    <td>User-facing responses</td>
+                </tr>
+                <tr>
+                    <td>Human-in-the-loop</td>
+                    <td>High</td>
+                    <td>Medium (confirmation UI)</td>
+                    <td>Destructive actions</td>
+                </tr>
+                <tr>
+                    <td>Few-shot examples</td>
+                    <td>Medium</td>
+                    <td>Low (add to system prompt)</td>
+                    <td>Always (2-3 examples)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="roadmap">8. Implementation Roadmap</h2>
+        
+        <div class="phase">
+            <h3>Phase 1: MVP Tools (Week 1-2) — Target: 70% of OpenClaw usefulness</h3>
+            <p><strong>Goal:</strong> Make StupidClaw actually useful. From "toy demo" to "functional assistant."</p>
+            
+            <h4>Sprint 1: Web Search + File Ops (Weekend 1)</h4>
+            <ul>
+                <li>✅ <strong>Web Search Tool:</strong> Brave API integration (2 hours)</li>
+                <li>✅ <strong>DuckDuckGo Backup:</strong> Scraper fallback (1 hour)</li>
+                <li>✅ <strong>File Read Tool:</strong> Sandboxed file reading (1 hour)</li>
+                <li>✅ <strong>File Write Tool:</strong> Sandboxed file writing with confirmation (2 hours)</li>
+                <li>✅ <strong>Basic ReAct Agent:</strong> Implement think → act → observe loop (3 hours)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~9 hours | <strong>Deliverable:</strong> Agent can search web + manage files</p>
+            
+            <h4>Sprint 2: Memory + Context (Weekend 2)</h4>
+            <ul>
+                <li>✅ <strong>Hot Session Memory:</strong> Sliding window with token budget (2 hours)</li>
+                <li>✅ <strong>Message Summarization:</strong> Groq llama-3.1-8b for compression (2 hours)</li>
+                <li>✅ <strong>Context Packing:</strong> Priority-based loading (2 hours)</li>
+                <li>✅ <strong>MEMORY.md:</strong> Procedural memory file (1 hour)</li>
+                <li>✅ <strong>Tool Output Truncation:</strong> Smart truncation for web/shell outputs (1 hour)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~8 hours | <strong>Deliverable:</strong> Agent remembers conversations, fits in 8K context</p>
+            
+            <h4>Sprint 3: Shell + Web Scraping (Weeknight 3-4)</h4>
+            <ul>
+                <li>✅ <strong>Shell Execution Tool:</strong> Sandboxed subprocess with output capture (3 hours)</li>
+                <li>✅ <strong>Web Scraping Tool:</strong> requests + BeautifulSoup (2 hours)</li>
+                <li>✅ <strong>Verification Layer:</strong> Force tool grounding, confidence scores (2 hours)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~7 hours | <strong>Deliverable:</strong> Agent can run commands + scrape web pages</p>
+            
+            <p><strong>Phase 1 Total:</strong> ~24 hours | <strong>Outcome:</strong> StupidClaw is now 70% as capable as OpenClaw</p>
+        </div>
+
+        <div class="phase">
+            <h3>Phase 2: Memory + RAG (Week 3-4) — Target: 85% of OpenClaw usefulness</h3>
+            
+            <h4>Sprint 4: Semantic Memory (Weekend 3)</h4>
+            <ul>
+                <li>✅ <strong>ChromaDB Setup:</strong> Local vector DB (1 hour)</li>
+                <li>✅ <strong>Embeddings:</strong> sentence-transformers/all-MiniLM-L6-v2 (1 hour)</li>
+                <li>✅ <strong>Memory Indexing:</strong> Index every message chunk (2 hours)</li>
+                <li>✅ <strong>Semantic Search Tool:</strong> Query-based retrieval (2 hours)</li>
+                <li>✅ <strong>Auto-Memory Updates:</strong> Background indexing after each conversation (2 hours)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~8 hours | <strong>Deliverable:</strong> Agent remembers everything, can recall from past</p>
+            
+            <h4>Sprint 5: Episodic Memory (Weeknight 5-6)</h4>
+            <ul>
+                <li>✅ <strong>Daily Logs:</strong> JSON-based event logging (2 hours)</li>
+                <li>✅ <strong>Event Schema:</strong> Task completions, searches, user prefs (1 hour)</li>
+                <li>✅ <strong>Log Retrieval:</strong> Date/keyword filtering (2 hours)</li>
+                <li>✅ <strong>Session Start Hook:</strong> Load recent logs (last 7 days) (1 hour)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~6 hours | <strong>Deliverable:</strong> Agent tracks history, learns from past</p>
+            
+            <h4>Sprint 6: Context Engineering (Weekend 4)</h4>
+            <ul>
+                <li>✅ <strong>Config Files:</strong> SOUL.md, USER.md equivalents (1 hour)</li>
+                <li>✅ <strong>Auto-Injection:</strong> Smart context loader (2 hours)</li>
+                <li>✅ <strong>User Preferences:</strong> Timezone, language, shortcuts (1 hour)</li>
+                <li>✅ <strong>Memory Consolidation:</strong> Weekly review + MEMORY.md update (2 hours)</li>
+            </ul>
+            <p><strong>Total Effort:</strong> ~6 hours | <strong>Deliverable:</strong> Agent has personality + user context</p>
+            
+            <p><strong>Phase 2 Total:</strong> ~20 hours | <strong>Outcome:</strong> StupidClaw is now 85% as capable as OpenClaw</p>
+        </div>
+
+        <div class="phase">
+            <h3>Phase 3: Advanced Features (Week 5-8) — Target: 95% of OpenClaw usefulness</h3>
+            
+            <h4>Optional Enhancements (Pick based on priority):</h4>
+            <ul>
+                <li>🔄 <strong>Image Analysis:</strong> Groq LLaVA or Qwen2-VL integration (~4 hours)</li>
+                <li>🔄 <strong>Browser Automation:</strong> Playwright basic integration (~10 hours)</li>
+                <li>🔄 <strong>Cron/Scheduling:</strong> Simple task scheduler (~6 hours)</li>
+                <li>🔄 <strong>Sub-agent Spawning:</strong> Recursive agent delegation (~10 hours)</li>
+                <li>🔄 <strong>Channel Adapters:</strong> Telegram/Discord webhook receiver (~8 hours)</li>
+                <li>🔄 <strong>Skill System:</strong> Plugin architecture for modular tools (~8 hours)</li>
+            </ul>
+            
+            <p><strong>Phase 3 Total:</strong> ~46 hours (pick subset) | <strong>Outcome:</strong> StupidClaw matches OpenClaw in key areas</p>
+        </div>
+
+        <h3>Total Implementation Time</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Phase</th>
+                    <th>Time Investment</th>
+                    <th>Capability Gain</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Phase 1 (MVP Tools)</td>
+                    <td>~24 hours (2 weekends)</td>
+                    <td>0% → 70%</td>
+                    <td><span class="priority priority-critical">Critical</span></td>
+                </tr>
+                <tr>
+                    <td>Phase 2 (Memory + RAG)</td>
+                    <td>~20 hours (2 weeks)</td>
+                    <td>70% → 85%</td>
+                    <td><span class="priority priority-high">High</span></td>
+                </tr>
+                <tr>
+                    <td>Phase 3 (Advanced)</td>
+                    <td>~46 hours (4 weeks)</td>
+                    <td>85% → 95%</td>
+                    <td><span class="priority priority-medium">Medium</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="success">
+            <h3>🎯 Quick Win Path (1 Month to Parity)</h3>
+            <ol>
+                <li><strong>Weeks 1-2:</strong> Phase 1 (MVP Tools) → StupidClaw becomes actually useful</li>
+                <li><strong>Weeks 3-4:</strong> Phase 2 (Memory) → StupidClaw remembers and learns</li>
+                <li><strong>Weeks 5-8:</strong> Phase 3 subset (pick 2-3 features) → StupidClaw matches OpenClaw in core areas</li>
+            </ol>
+            <p><strong>Total Time:</strong> ~70 hours spread across 8 weeks = ~9 hours/week (sustainable pace)</p>
+        </div>
+
+        <h2>Appendix: Key Learnings from Research</h2>
+        
+        <div class="card">
+            <div class="card-title">What Makes Agents Work with Small Models?</div>
+            <ol>
+                <li><strong>Code > JSON:</strong> Agents that write actions as Python code outperform JSON-based tool calling by ~30% (smolagents research)</li>
+                <li><strong>Few-shot is enough:</strong> Small models learn tool usage from 2-3 examples (no fine-tuning needed)</li>
+                <li><strong>Grounding is critical:</strong> Always show tool outputs. Models hallucinate less when forced to ground in observations</li>
+                <li><strong>Simplicity wins:</strong> ReAct pattern (think → act → observe) beats complex planning for <70B models</li>
+                <li><strong>Memory architecture matters:</strong> 4-tier memory (hot + semantic + episodic + procedural) fits small contexts</li>
+                <li><strong>Free tools exist:</strong> Brave API (2K/mo), ChromaDB (local), SearXNG (self-hosted) = $0 operating cost</li>
+                <li><strong>Context is precious:</strong> With 8K tokens, every token counts. Aggressive compression + priority loading is mandatory</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <h3>References & Resources</h3>
+            <ul>
+                <li><strong>smolagents:</strong> <a href="https://github.com/huggingface/smolagents">github.com/huggingface/smolagents</a></li>
+                <li><strong>ReAct Paper:</strong> <a href="https://arxiv.org/abs/2210.03629">arxiv.org/abs/2210.03629</a></li>
+                <li><strong>Anthropic's Building Agents Guide:</strong> <a href="https://www.anthropic.com/research/building-effective-agents">anthropic.com/research/building-effective-agents</a></li>
+                <li><strong>Brave Search API:</strong> <a href="https://brave.com/search/api/">brave.com/search/api</a></li>
+                <li><strong>ChromaDB:</strong> <a href="https://www.trychroma.com/">trychroma.com</a></li>
+                <li><strong>Letta (MemGPT):</strong> <a href="https://github.com/letta-ai/letta">github.com/letta-ai/letta</a></li>
+            </ul>
+        </div>
+
+        <hr style="margin: 40px 0; border: none; border-top: 2px solid #cbd5e0;">
+
+        <p style="text-align: center; color: #718096; font-size: 0.9em;">
+            <strong>Generated by OpenClaw Research Agent</strong><br>
+            March 6, 2026 | Gap analysis for StupidClaw → OpenClaw parity on zero budget
+        </p>
+
+    </div>
+</body>
+</html>

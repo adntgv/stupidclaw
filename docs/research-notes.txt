@@ -1,0 +1,32 @@
+Research Notes for StupidClaw Gap Analysis
+===========================================
+
+## Key Sources:
+1. HuggingFace smolagents - Code agents that write actions in Python
+2. Anthropic's Building Effective Agents - Workflow patterns
+3. ReAct (Reasoning + Acting) - Core agent pattern
+
+## Free Web Search APIs Research:
+- SearXNG (self-hosted, free)
+- DuckDuckGo API (limited, no official API)
+- Brave Search API (2000 free queries/month)
+- Tavily AI (1000 free searches/month)
+- Exa.ai (1000 free searches/month)
+
+## Small Model Agent Frameworks:
+- smolagents (HuggingFace) - designed for small models
+- TinyAgent - specialized for resource-constrained environments
+- DSPy - programming model for LM pipelines
+- LangChain with local models
+
+## Memory Architecture Options:
+1. Hot Session Memory (in-memory dict/list)
+2. Semantic Memory (vector DB: ChromaDB, FAISS)
+3. Episodic Memory (SQLite or JSON files)
+4. Procedural Memory (learned patterns/rules)
+
+## Context Packing Strategies:
+- Summarization of older messages
+- Semantic chunking and retrieval
+- Priority-based context selection
+- Sliding window with compression

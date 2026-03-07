@@ -1,0 +1,18 @@
+services:
+  stupidclaw:
+    build: .
+    container_name: stupidclaw
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      # To reach maxclaw on MacBook, use host network or set OPENAI_BASE_URL to your Mac's local IP
+      # Example: OPENAI_BASE_URL=http://192.168.1.x:9999/v1
+    network_mode: host
+    volumes:
+      - ./src:/app/src
+      - ./skills:/app/skills
+      - ./data:/app/data
+      - ./.chroma_cache/chroma:/root/.cache/chroma
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for docker tool
