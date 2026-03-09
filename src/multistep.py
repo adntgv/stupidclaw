@@ -405,39 +405,42 @@ class ConversationalExecutor:
             
             result = tool.execute(step.params)
             
+            # Extract string output from ToolResult object
+            result_str = result.output if hasattr(result, 'output') else str(result)
+            
             # Programmatic verification first
-            quick_check = self._quick_verify(step.tool, result)
+            quick_check = self._quick_verify(step.tool, result_str)
             
             if quick_check is True:
                 # Clear success, skip LLM call
-                state.mark_success(step, result)
+                state.mark_success(step, result_str)
                 return True
             
             elif quick_check is False:
                 # Clear failure
-                state.mark_failed(step, result)
+                state.mark_failed(step, result_str)
                 
                 # Ask LLM to verify (maybe it's not actually a failure)
-                verification = self.planner.verify_step(step, result)
+                verification = self.planner.verify_step(step, result_str)
                 state.llm_calls += 1
                 
                 if verification["success"]:
                     # LLM says success despite programmatic failure
-                    state.mark_success(step, result)
+                    state.mark_success(step, result_str)
                     return True
                 
                 return False
             
             else:
                 # Unclear, ask LLM
-                verification = self.planner.verify_step(step, result)
+                verification = self.planner.verify_step(step, result_str)
                 state.llm_calls += 1
                 
                 if verification["success"]:
-                    state.mark_success(step, result)
+                    state.mark_success(step, result_str)
                     return True
                 else:
-                    state.mark_failed(step, result)
+                    state.mark_failed(step, result_str)
                     return False
         
         except Exception as e:
