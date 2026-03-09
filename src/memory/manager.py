@@ -15,7 +15,7 @@ class MemoryManager:
     """Combines all 4 memory tiers: hot, semantic, episodic, procedural"""
     
     def __init__(self, data_dir: str = "/app/data"):
-        self.hot = HotMemory(max_tokens=2000)
+        self.hot = HotMemory(max_tokens=2000, persist_path=f"{data_dir}/hot_memory.json")
         self.semantic = SemanticMemory(persist_dir=f"{data_dir}/chromadb")
         self.episodic = EpisodicMemory(data_dir=f"{data_dir}/episodes")
         self.procedural = ProceduralMemory(data_dir=data_dir)
