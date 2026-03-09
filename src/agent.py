@@ -5,6 +5,7 @@ from openai import OpenAI
 from src.config import OPENAI_API_KEY, OPENAI_BASE_URL, MODEL_NAME
 from src.tools import get_default_tools
 from src.memory import MemoryManager
+from src.multistep import ConversationalExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +126,13 @@ class StupidAgent:
 TOOLS:
 {tools_list}
 
-RULES:
-1. Use tools when you need information
-2. If a tool says ERROR, try a different tool or approach
-3. Always explain what you're doing
-4. You can read and modify your own source code at /app/src/
+CRITICAL RULES:
+1. When calling a tool: DO NOT write anything, just call the tool
+2. NEVER output text like "web_search(...)" - the system handles tool calls automatically
+3. Wait for tool results, THEN respond to the user
+4. If a tool says ERROR, try a different tool or approach
+5. After using tools, summarize what you learned in plain language
+6. You can read and modify your own source code at /app/src/
 
 EXAMPLES:
 
@@ -167,6 +170,11 @@ ERROR handling:
         # Store user message
         self.memory.add_user_message(chat_id, user_message)
         
+        # Detect if this needs multi-step reasoning
+        if self._is_multistep_task(user_message):
+            logger.info("Detected multi-step task, using conversational pipeline")
+            return self._run_multistep(user_message, chat_id)
+        
         # Build memory context
         memory_context = self.memory.build_context(chat_id, user_message, budget=3000)
         
@@ -202,6 +210,77 @@ ERROR handling:
             logger.error(error_msg, exc_info=True)
             self.memory.log_error(chat_id, error_msg, user_message)
             return f"I encountered an error: {str(e)}"
+    
+    def _is_multistep_task(self, message: str) -> bool:
+        """Detect if task needs multi-step planning"""
+        msg_lower = message.lower()
+        
+        # Multi-step keywords
+        multistep_keywords = [
+            "fix and commit",
+            "read and write",
+            "search and summarize",
+            "analyze and improve",
+            "debug and deploy",
+            "modify and push",
+            "test and fix",
+            "create and deploy",
+            "build and commit"
+        ]
+        
+        # Check for explicit multi-step phrases
+        if any(kw in msg_lower for kw in multistep_keywords):
+            return True
+        
+        # Check message length (longer messages often need planning)
+        if len(message.split()) > 20:
+            return True
+        
+        # Check for multiple action verbs
+        action_verbs = ["fix", "modify", "create", "read", "write", "commit", "push", "deploy", "test", "analyze"]
+        verb_count = sum(1 for verb in action_verbs if verb in msg_lower)
+        if verb_count >= 3:
+            return True
+        
+        return False
+    
+    def _run_multistep(self, task: str, chat_id: str) -> str:
+        """Execute task using conversational pipeline"""
+        try:
+            # Create LLM wrapper for the pipeline
+            def llm_wrapper(prompt: str, max_tokens: int = 300) -> str:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens
+                )
+                return response.choices[0].message.content or ""
+            
+            # Create executor
+            executor = ConversationalExecutor(llm_wrapper, self.tools)
+            
+            # Execute
+            result = executor.execute(task)
+            
+            # Build response message
+            if result["success"]:
+                answer = f"✅ Completed {result['completed_steps']}/{result['total_steps']} steps\n\n{result['final_message']}"
+            else:
+                answer = f"❌ Completed {result['completed_steps']}/{result['total_steps']} steps\n\n{result['final_message']}"
+            
+            # Log stats
+            logger.info(f"Multi-step task: {result['llm_calls']} LLM calls, {result['completed_steps']}/{result['total_steps']} steps")
+            
+            # Store response
+            self.memory.add_bot_response(chat_id, answer)
+            
+            return answer
+            
+        except Exception as e:
+            error_msg = f"Multi-step execution failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            self.memory.log_error(chat_id, error_msg, task)
+            return f"I encountered an error during multi-step execution: {str(e)}"
 
     def _run_with_tools(self, messages: list, chat_id: str, max_rounds: int = 3) -> str:
         """
@@ -230,6 +309,12 @@ ERROR handling:
                     # Clean up thinking tags
                     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
                     
+                    # Clean up tool call text (weak models leak these)
+                    # Matches: "web_search(...)" or "tool_name(...)"
+                    text = re.sub(r'\b\w+\(["\'].*?["\'](?:,.*?)?\)', '', text).strip()
+                    # Also match bare tool_name(...) without quotes
+                    text = re.sub(r'\b(?:web_search|web_fetch|file_read|file_write|file_list|shell|git)\([^)]*\)', '', text).strip()
+                    
                     # Weak models sometimes give empty responses - prompt them again
                     if not text and round_num < max_rounds - 1:
                         conversation.append({
@@ -256,9 +341,8 @@ ERROR handling:
                     ]
                 }
                 
-                # Add content if present
-                if message.content:
-                    assistant_msg["content"] = message.content
+                # Don't include content when making tool calls (weak models pollute it with tool syntax)
+                # The LLM should wait for tool results, not output text alongside tool calls
                 
                 conversation.append(assistant_msg)
                 
