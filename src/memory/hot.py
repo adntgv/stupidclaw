@@ -19,6 +19,11 @@ class HotMemory:
     
     def add_message(self, chat_id: str, role: str, content: str):
         """Add a message to conversation history"""
+        # Don't add messages with None or empty content
+        if not content:
+            logger.warning(f"Skipping message with empty content for {chat_id}")
+            return
+        
         msg = {"role": role, "content": content}
         self.conversations[chat_id].append(msg)
         self._trim_to_budget(chat_id)

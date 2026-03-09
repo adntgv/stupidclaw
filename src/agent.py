@@ -79,8 +79,12 @@ class StupidAgent:
             messages = [{"role": "system", "content": system_prompt}]
             
             # Add conversation history except the last message (which is the current user message we just logged)
+            # Filter out any messages with None content (can happen with tool calls)
             if len(conversation_history) > 1:
-                messages.extend(conversation_history[:-1])
+                for msg in conversation_history[:-1]:
+                    # Only add messages with valid content
+                    if msg.get("content"):
+                        messages.append(msg)
             
             # Add current user message
             messages.append({"role": "user", "content": user_message})
@@ -90,6 +94,7 @@ class StupidAgent:
             
             # Safety check: ensure we always have a string response
             if answer is None or not isinstance(answer, str):
+                logger.error(f"LLM returned invalid response: {type(answer)}, value: {answer}")
                 answer = "I processed your request but couldn't generate a response."
             
             # Self-healing: Check for errors in response
@@ -100,11 +105,12 @@ class StupidAgent:
             # Periodic error pattern review
             self.self_healer.periodic_review()
             
-            # Log bot response
-            self.memory.add_bot_response(chat_id, answer)
-            
-            # Self-modification: extract and store facts
-            self.self_modifier.extract_and_store_facts(user_message, answer, chat_id)
+            # Log bot response (only if we have a valid answer)
+            if answer and isinstance(answer, str):
+                self.memory.add_bot_response(chat_id, answer)
+                
+                # Self-modification: extract and store facts
+                self.self_modifier.extract_and_store_facts(user_message, answer, chat_id)
             
             return answer
             
@@ -139,7 +145,12 @@ class StupidAgent:
                 # If no tool calls, return the text response
                 if not message.tool_calls:
                     text = message.content or ""
-                    return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+                    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+                    # Ensure we never return empty string
+                    if not cleaned:
+                        logger.warning("LLM returned empty response, using fallback")
+                        return "I processed your request but have no response."
+                    return cleaned
                 
                 # Add assistant message to conversation
                 # Note: message.content can be None when there are only tool calls
