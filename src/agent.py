@@ -40,35 +40,39 @@ class StupidAgent:
         return schemas
 
     def _build_system_prompt(self, memory_context: str = "") -> str:
-        """Build a strong system prompt that teaches reasoning and error handling"""
+        """Build a system prompt optimized for weaker models (explicit, step-by-step)"""
         tools_list = "\n".join(f"- {name}: {tool.description}" for name, tool in self.tools.items())
         
-        prompt = f"""You are StupidClaw, a capable AI assistant with tools and memory.
+        prompt = f"""You are StupidClaw. You have tools and memory.
 
-TOOLS AVAILABLE:
+TOOLS:
 {tools_list}
 
-CORE PRINCIPLES:
-1. Use tools to get real information - don't make things up
-2. Read errors carefully and try different approaches
-3. Explain your reasoning when solving problems
-4. Remember context from previous messages in this conversation
+RULES:
+1. Use tools when you need information
+2. If a tool says ERROR, try a different tool or approach
+3. Always explain what you're doing
 
-WHEN A TOOL FAILS:
-- READ the error message carefully
-- Explain what went wrong
-- Try a different approach or tool
-- If truly stuck, explain why and ask for help
+EXAMPLES:
 
-WHEN ASKED TO RETRY:
-- Refer to the previous attempt
-- Explain what you'll do differently
-- Then try again with the improved approach
+User asks about weather:
+1. Call web_search with "weather [city]"
+2. If it fails, call web_fetch with a weather URL
+3. Tell the user what you found
 
-You have conversation memory - use it. If the user says "retry" or "try again", refer back to what failed and improve on it."""
+User says "retry":
+1. Look at previous messages (you have memory)
+2. See what failed
+3. Try a different way
+4. Explain: "Last time I tried X and got error Y. Now trying Z instead."
+
+ERROR handling:
+- Tool returns "ERROR: ..." → try different tool
+- Tool returns "TOOL ERROR: ..." → try different approach
+- If stuck after 2 tries → tell user what went wrong and ask for help"""
 
         if memory_context:
-            prompt += f"\n\nCONTEXT FROM MEMORY:\n{memory_context[:800]}"
+            prompt += f"\n\nRECENT MEMORY:\n{memory_context[:600]}"
         
         return prompt
 
@@ -113,7 +117,7 @@ You have conversation memory - use it. If the user says "retry" or "try again", 
             self.memory.log_error(chat_id, error_msg, user_message)
             return f"I encountered an error: {str(e)}"
 
-    def _run_with_tools(self, messages: list, chat_id: str, max_rounds: int = 5) -> str:
+    def _run_with_tools(self, messages: list, chat_id: str, max_rounds: int = 3) -> str:
         """
         Run LLM with tools, letting it see errors and reason about them.
         No defensive checks - let the LLM handle everything.
@@ -129,7 +133,7 @@ You have conversation memory - use it. If the user says "retry" or "try again", 
                     messages=conversation,
                     tools=tools_schema,
                     tool_choice="auto",
-                    max_tokens=2048  # More tokens for reasoning
+                    max_tokens=1024  # Enough for weak models
                 )
                 
                 message = response.choices[0].message
@@ -139,6 +143,15 @@ You have conversation memory - use it. If the user says "retry" or "try again", 
                     text = message.content or ""
                     # Clean up thinking tags
                     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+                    
+                    # Weak models sometimes give empty responses - prompt them again
+                    if not text and round_num < max_rounds - 1:
+                        conversation.append({
+                            "role": "system",
+                            "content": "Please provide an answer. What did you find from the tools?"
+                        })
+                        continue
+                    
                     return text if text else None
                 
                 # LLM wants to use tools - add its message to conversation
@@ -183,7 +196,7 @@ You have conversation memory - use it. If the user says "retry" or "try again", 
                     conversation.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
-                        "content": result[:3000]  # Larger context for errors
+                        "content": result[:1200]  # Keep it focused for weak models
                     })
                 
                 # Continue loop - LLM will see tool results and decide next step
@@ -198,10 +211,10 @@ You have conversation memory - use it. If the user says "retry" or "try again", 
                 # One more round to let LLM respond to the error
                 continue
         
-        # If we hit max rounds, let the LLM know and give it a chance to summarize
+        # If we hit max rounds, give explicit instructions
         conversation.append({
             "role": "system",
-            "content": "You've made several tool calls. Please provide a final answer based on what you've learned, or explain what's preventing you from answering."
+            "content": "You've tried 3 times. Now give your final answer: What did you learn? If you couldn't complete the task, say exactly what went wrong and what the user should do."
         })
         
         try:
