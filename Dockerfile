@@ -2,10 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install SSL certs, curl, and build deps
+# Install SSL certs, curl, git, and build deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    git \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
