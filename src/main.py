@@ -105,6 +105,10 @@ async def echo_handler(message: Message) -> None:
         # Run the agent with chat_id for memory tracking
         response = agent.run(message.text, chat_id=chat_id)
         
+        # Safety check: ensure response is a string
+        if not response or not isinstance(response, str):
+            response = "I encountered an issue processing your request."
+        
         await message.answer(response)
     except Exception as e:
         logging.error(f"Error handling message: {e}")

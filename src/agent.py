@@ -78,6 +78,10 @@ class StupidAgent:
                 {"role": "user", "content": user_message}
             ], chat_id)
             
+            # Safety check: ensure we always have a string response
+            if answer is None or not isinstance(answer, str):
+                answer = "I processed your request but couldn't generate a response."
+            
             # Self-healing: Check for errors in response
             if self.self_healer.check_for_errors(answer):
                 logger.warning("Error detected in response, logging for analysis")
@@ -128,9 +132,9 @@ class StupidAgent:
                     return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
                 
                 # Add assistant message to conversation
-                conversation.append({
+                # Note: message.content can be None when there are only tool calls
+                assistant_msg = {
                     "role": "assistant",
-                    "content": message.content,
                     "tool_calls": [
                         {
                             "id": tc.id,
@@ -142,7 +146,12 @@ class StupidAgent:
                         }
                         for tc in message.tool_calls
                     ]
-                })
+                }
+                # Only add content if it's not None
+                if message.content:
+                    assistant_msg["content"] = message.content
+                
+                conversation.append(assistant_msg)
                 
                 # Execute each tool call
                 for tool_call in message.tool_calls:
