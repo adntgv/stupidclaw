@@ -393,6 +393,28 @@ class ConversationalExecutor:
         # Success!
         return self._build_result(state, "All steps completed successfully", success=True)
     
+    def _convert_params_to_args(self, tool_name: str, params: dict) -> str:
+        """Convert dict parameters to string format expected by tools"""
+        if isinstance(params, str):
+            return params  # Already a string
+        
+        if tool_name == "file_read":
+            return params.get("path") or params.get("filename") or params.get("file") or params.get("file_path", "")
+        elif tool_name == "file_write":
+            path = params.get("path") or params.get("filename") or params.get("file", "")
+            content = params.get("content") or params.get("text") or params.get("data", "")
+            return f"{path}|||{content}"
+        elif tool_name == "file_list":
+            return params.get("directory") or params.get("dir") or params.get("subdirectory") or params.get("folder") or params.get("path", "")
+        elif tool_name == "web_search":
+            return params.get("query") or params.get("q") or params.get("search") or params.get("term", "")
+        elif tool_name == "web_fetch":
+            return params.get("url") or params.get("link") or params.get("uri") or params.get("address", "")
+        elif tool_name in ("shell", "git"):
+            return params.get("command") or params.get("cmd") or params.get("script", "")
+        else:
+            return params.get("args", "") or next(iter(params.values()), "") if params else ""
+    
     def _execute_and_verify(self, step: Step, state: ExecutionState) -> bool:
         """Execute step and verify result"""
         # Execute tool
@@ -403,7 +425,10 @@ class ConversationalExecutor:
                 state.mark_failed(step, step.result)
                 return False
             
-            result = tool.execute(step.params)
+            # Convert dict params to string format
+            args_str = self._convert_params_to_args(step.tool, step.params)
+            
+            result = tool.execute(args_str)
             
             # Extract string output from ToolResult object
             result_str = result.output if hasattr(result, 'output') else str(result)
