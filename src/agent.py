@@ -17,26 +17,103 @@ class StupidAgent:
         self.memory = MemoryManager(data_dir=data_dir)
 
     def _tools_to_openai_schema(self) -> list:
-        """Convert internal tools to OpenAI function calling format"""
+        """Convert internal tools to OpenAI function calling format with natural parameters"""
         schemas = []
+        
+        # Custom schemas for each tool (LLM-friendly parameter names)
+        custom_schemas = {
+            "file_read": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "File path to read"}
+                    },
+                    "required": ["path"]
+                }
+            },
+            "file_write": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "File path to write"},
+                        "content": {"type": "string", "description": "Content to write"}
+                    },
+                    "required": ["path", "content"]
+                }
+            },
+            "file_list": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "directory": {"type": "string", "description": "Directory to list (default: current)"}
+                    }
+                }
+            },
+            "web_search": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"]
+                }
+            },
+            "web_fetch": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string", "description": "URL to fetch"}
+                    },
+                    "required": ["url"]
+                }
+            },
+            "shell": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string", "description": "Shell command to execute"}
+                    },
+                    "required": ["command"]
+                }
+            },
+            "git": {
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string", "description": "Git command (e.g., 'status', 'add .', 'commit -m \"msg\"')"}
+                    },
+                    "required": ["command"]
+                }
+            }
+        }
+        
         for tool_name, tool in self.tools.items():
-            schemas.append({
+            schema = {
                 "type": "function",
                 "function": {
                     "name": tool_name,
-                    "description": tool.description,
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "args": {
-                                "type": "string",
-                                "description": tool.args_description
-                            }
-                        },
-                        "required": ["args"]
-                    }
+                    "description": tool.description
                 }
-            })
+            }
+            
+            # Use custom schema if available, otherwise fallback to args
+            if tool_name in custom_schemas:
+                schema["function"]["parameters"] = custom_schemas[tool_name]["parameters"]
+            else:
+                # Fallback for other tools
+                schema["function"]["parameters"] = {
+                    "type": "object",
+                    "properties": {
+                        "args": {
+                            "type": "string",
+                            "description": tool.args_description
+                        }
+                    },
+                    "required": ["args"]
+                }
+            
+            schemas.append(schema)
+        
         return schemas
 
     def _build_system_prompt(self, memory_context: str = "") -> str:
@@ -189,11 +266,12 @@ ERROR handling:
                 for tool_call in message.tool_calls:
                     function_name = tool_call.function.name
                     
-                    # Parse arguments
+                    # Parse arguments and convert to tool format
                     try:
                         function_args = json.loads(tool_call.function.arguments)
-                        args_str = function_args.get("args", "")
-                    except:
+                        args_str = self._convert_params_to_args(function_name, function_args)
+                    except Exception as e:
+                        logger.error(f"Failed to parse arguments for {function_name}: {e}")
                         args_str = tool_call.function.arguments
                     
                     logger.info(f"[Round {round_num+1}] Calling {function_name}({args_str[:50]}...)")
@@ -237,6 +315,25 @@ ERROR handling:
         except:
             return None
 
+    def _convert_params_to_args(self, tool_name: str, params: dict) -> str:
+        """Convert natural parameters to args string format"""
+        # Handle tools with custom parameter mapping
+        if tool_name == "file_read":
+            return params.get("path", "")
+        elif tool_name == "file_write":
+            return f"{params.get('path', '')}|||{params.get('content', '')}"
+        elif tool_name == "file_list":
+            return params.get("directory", "")
+        elif tool_name == "web_search":
+            return params.get("query", "")
+        elif tool_name == "web_fetch":
+            return params.get("url", "")
+        elif tool_name in ("shell", "git"):
+            return params.get("command", "")
+        else:
+            # Fallback: use args if present, otherwise first value
+            return params.get("args", "") or next(iter(params.values()), "")
+    
     def _execute_tool(self, tool_name: str, args: str, chat_id: str) -> str:
         """
         Execute a tool and return the result (success or error).
