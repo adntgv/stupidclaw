@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir -p /app/data/chromadb /app/data/episodes && \
     chmod -R 777 /app/data
 
+# Configure git to trust /app directory (for mounted volumes)
+RUN git config --global --add safe.directory /app
+
 # Copy source code and skills
 COPY src/ ./src/
 COPY skills/ ./skills/
