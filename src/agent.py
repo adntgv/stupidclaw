@@ -316,20 +316,28 @@ ERROR handling:
             return None
 
     def _convert_params_to_args(self, tool_name: str, params: dict) -> str:
-        """Convert natural parameters to args string format"""
-        # Handle tools with custom parameter mapping
+        """Convert natural parameters to args string format (handles parameter name variations)"""
+        # Handle tools with custom parameter mapping + common synonyms
         if tool_name == "file_read":
-            return params.get("path", "")
+            # Accept: path, filename, file, file_path
+            return params.get("path") or params.get("filename") or params.get("file") or params.get("file_path", "")
         elif tool_name == "file_write":
-            return f"{params.get('path', '')}|||{params.get('content', '')}"
+            # Accept: path/filename for file, content/text/data for content
+            path = params.get("path") or params.get("filename") or params.get("file", "")
+            content = params.get("content") or params.get("text") or params.get("data", "")
+            return f"{path}|||{content}"
         elif tool_name == "file_list":
-            return params.get("directory", "")
+            # Accept: directory, dir, subdirectory, folder, path
+            return params.get("directory") or params.get("dir") or params.get("subdirectory") or params.get("folder") or params.get("path", "")
         elif tool_name == "web_search":
-            return params.get("query", "")
+            # Accept: query, q, search, term
+            return params.get("query") or params.get("q") or params.get("search") or params.get("term", "")
         elif tool_name == "web_fetch":
-            return params.get("url", "")
+            # Accept: url, link, uri, address
+            return params.get("url") or params.get("link") or params.get("uri") or params.get("address", "")
         elif tool_name in ("shell", "git"):
-            return params.get("command", "")
+            # Accept: command, cmd, script
+            return params.get("command") or params.get("cmd") or params.get("script", "")
         else:
             # Fallback: use args if present, otherwise first value
             return params.get("args", "") or next(iter(params.values()), "")
