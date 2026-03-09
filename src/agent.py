@@ -72,11 +72,21 @@ class StupidAgent:
             if memory_context:
                 system_prompt += f"\n\nContext from memory:\n{memory_context[:1000]}"
             
+            # Get conversation history (last 10 messages, excluding current which was just added)
+            conversation_history = self.memory.hot.get_history(chat_id, max_messages=11)
+            
+            # Build messages: system + history (excluding the just-added current message)
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add conversation history except the last message (which is the current user message we just logged)
+            if len(conversation_history) > 1:
+                messages.extend(conversation_history[:-1])
+            
+            # Add current user message
+            messages.append({"role": "user", "content": user_message})
+            
             # Call LLM with tools
-            answer = self._llm_with_tools([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ], chat_id)
+            answer = self._llm_with_tools(messages, chat_id)
             
             # Safety check: ensure we always have a string response
             if answer is None or not isinstance(answer, str):
